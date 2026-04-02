@@ -75,24 +75,34 @@ python run.py
 http://127.0.0.1:5000
 ```
 
-## Publicarlo online
+## Publicarlo online gratis con Railway
 
-La app quedo preparada para desplegarse en `Render` con el archivo [render.yaml](/Users/emiliodelvilano/Desktop/adecoagro/render.yaml).
+La app quedo preparada para desplegarse en `Railway` con el archivo [railway.toml](/Users/emiliodelvilano/Desktop/adecoagro/railway.toml).
 
 Puntos importantes:
 
-- Render sigue ofreciendo web services publicos con subdominio `onrender.com`
-- Esta app usa `SQLite` e imagenes locales, asi que necesita almacenamiento persistente para no perder datos
-- En Render eso se resuelve con un `disk`, ya dejado configurado en `render.yaml`
+- Railway permite desplegar desde GitHub
+- Esta app usa `SQLite` e imagenes locales, asi que necesita almacenamiento persistente
+- Railway soporta `Volumes` y en planes `Free` ofrece hasta `0.5GB` por proyecto
+- Cuando attaches un volumen, Railway expone automaticamente `RAILWAY_VOLUME_MOUNT_PATH`
+- La app ya usa esa variable automaticamente para guardar base e imagenes dentro del volumen
 
 Pasos:
 
-1. Subir este proyecto a un repositorio de GitHub.
-2. Crear una cuenta en Render y conectar ese repositorio.
-3. Crear el servicio usando el `Blueprint` o importando el repo.
-4. Confirmar el despliegue y esperar la URL publica.
+1. Entra a Railway y crea un proyecto nuevo desde GitHub.
+2. Selecciona el repo `emiliog23/Adecoagro`.
+3. Deja que Railway detecte el proyecto Python.
+4. En el servicio, agrega un `Volume`.
+5. Montalo en una ruta como `/app/data`.
+6. Redeploy del servicio.
 
-Si quieres durabilidad real de datos en produccion, conviene mantener el disco persistente o luego migrar a Postgres y un storage externo para imagenes.
+Con eso:
+
+- la base SQLite quedara en el volumen
+- las imagenes adjuntas tambien quedaran persistidas
+- el start command saldra de `railway.toml`
+
+Si luego quieres, puedes definir manualmente `DATA_DIR`, pero para Railway no hace falta si el volumen esta adjunto.
 
 ## Estructura
 

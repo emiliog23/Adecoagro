@@ -13,7 +13,11 @@ login_manager.login_message = "Inicia sesion para continuar."
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
-    data_dir = Path(os.environ.get("DATA_DIR", app.instance_path))
+    data_dir = Path(
+        os.environ.get("DATA_DIR")
+        or os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
+        or app.instance_path
+    )
     upload_dir = data_dir / "uploads"
 
     app.config["SECRET_KEY"] = "adecoagro-esteril-2-secret"
