@@ -104,13 +104,20 @@ a {
 }
 
 .user-chip {
-  display: grid;
-  gap: 0.1rem;
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  justify-content: space-between;
   padding: 0.55rem 0.8rem;
   border: 1px solid rgba(113, 101, 87, 0.18);
   border-radius: 12px;
   background: rgba(255, 253, 248, 0.9);
   text-align: right;
+}
+
+.user-chip div {
+  display: grid;
+  gap: 0.1rem;
 }
 
 .user-chip strong {
@@ -120,6 +127,11 @@ a {
 .user-chip span {
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.user-chip-link {
+  font-weight: 700;
+  color: var(--accent-dark);
 }
 
 .nav a {

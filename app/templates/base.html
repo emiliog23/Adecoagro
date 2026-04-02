@@ -21,8 +21,11 @@
       {% if current_user.is_authenticated %}
       <div class="topbar-actions">
         <div class="user-chip">
-          <strong>{{ current_user.full_name }}</strong>
-          <span>@{{ current_user.username }}</span>
+          <div>
+            <strong>{{ current_user.full_name }}</strong>
+            <span>@{{ current_user.username }}</span>
+          </div>
+          <a class="user-chip-link" href="{{ url_for('logout') }}">Salir</a>
         </div>
         <nav class="nav">
           <a href="{{ url_for('reports') }}">Reportes</a>
@@ -32,7 +35,6 @@
           {% if current_user.can_manage_admin %}
           <a href="{{ url_for('admin_dashboard') }}">Administracion</a>
           {% endif %}
-          <a href="{{ url_for('logout') }}">Salir</a>
         </nav>
       </div>
       {% endif %}

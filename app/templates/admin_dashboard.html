@@ -22,16 +22,14 @@
   <a class="button-link" href="{{ url_for('manage_users') }}">Gestionar usuarios</a>
 </section>
 
+{% if current_user.is_superadmin %}
 <section class="card">
   <h3>Acciones rapidas</h3>
-  {% if current_user.is_superadmin %}
   <form method="post" action="{{ url_for('report_delete_all') }}">
     <button type="submit" class="danger-button">Eliminar todos los reportes</button>
   </form>
-  {% else %}
-  <p class="muted">Solo un superadmin puede eliminar todos los reportes.</p>
-  {% endif %}
 </section>
+{% endif %}
 
 <section class="card">
   <h3>Ultimos reportes</h3>
