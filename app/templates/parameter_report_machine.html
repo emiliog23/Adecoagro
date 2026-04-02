@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Parametros {{ machine.name }} | adecoagro{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">{{ machine.line.name }}</p>
+    <h2>{{ machine.name }}</h2>
+    <p class="muted">Pagina de parametros historicos de la maquina.</p>
+  </div>
+  <a class="button-link" href="{{ url_for('parameter_report_create') }}">Cargar nuevo parametro</a>
+</section>
+
+<section class="report-grid">
+  {% for card in parameter_cards %}
+  <article class="card parameter-card">
+    <div class="report-card-top">
+      <span class="status-badge">{{ card.parameter.parameter_type }}</span>
+      <span class="muted">{{ card.history_count }} registros</span>
+    </div>
+    <h3>{{ card.parameter.name }}</h3>
+    <p class="parameter-current">{{ "%.2f"|format(card.latest.value) }} {{ card.parameter.unit }}</p>
+    <ul class="meta-list">
+      <li><strong>Receta actual:</strong> {{ card.latest.current_recipe }}</li>
+      <li><strong>Fecha del cambio:</strong> {{ card.latest.changed_at.strftime('%d/%m/%Y %H:%M') }}</li>
+      <li><strong>Promedio historico:</strong> {{ "%.2f"|format(card.average) }} {{ card.parameter.unit }}</li>
+      <li><strong>Ultimo parametro:</strong> {% if card.previous %}{{ "%.2f"|format(card.previous.value) }} {{ card.parameter.unit }}{% else %}Sin dato previo{% endif %}</li>
+      <li><strong>Tendencia:</strong> {{ card.trend_label }}</li>
+      <li><strong>Valor mas alto:</strong> {{ "%.2f"|format(card.highest) }} {{ card.parameter.unit }}</li>
+      <li><strong>Valor mas bajo:</strong> {{ "%.2f"|format(card.lowest) }} {{ card.parameter.unit }}</li>
+    </ul>
+  </article>
+  {% else %}
+  <section class="card">
+    <p>Esta maquina aun no tiene parametros cargados.</p>
+  </section>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Parametros por maquina | adecoagro{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h2>Reportes de parametros</h2>
+    <p class="muted">Consulta los parametros de receta y mecanicos agrupados por maquina.</p>
+  </div>
+  <a class="button-link" href="{{ url_for('parameter_report_create') }}">Cargar parametro</a>
+</section>
+
+<section class="report-grid">
+  {% for card in machine_cards %}
+  <article class="card report-card">
+    <div class="report-card-top">
+      <span class="status-badge">{{ card.machine.line.name }}</span>
+      <span class="muted">{{ card.parameter_count }} parametros</span>
+    </div>
+    <h3>{{ card.machine.name }}</h3>
+    <ul class="meta-list">
+      <li><strong>Tipos cargados:</strong> {{ card.types|join(", ") if card.types else "Sin datos" }}</li>
+      <li><strong>Ultimo cambio:</strong> {% if card.latest_change %}{{ card.latest_change.strftime('%d/%m/%Y %H:%M') }}{% else %}Sin historial{% endif %}</li>
+    </ul>
+    <div class="action-row">
+      <a class="button-link secondary" href="{{ url_for('parameter_report_machine', machine_id=card.machine.id) }}">Ver pagina</a>
+    </div>
+  </article>
+  {% else %}
+  <section class="card">
+    <p>No hay maquinas disponibles para mostrar.</p>
+  </section>
+  {% endfor %}
+</section>
+{% endblock %}

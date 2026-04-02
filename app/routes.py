@@ -1,4 +1,6 @@
+from datetime import datetime
 from pathlib import Path
+from statistics import mean
 from uuid import uuid4
 
 from flask import current_app, flash, redirect, render_template, request, send_from_directory, url_for
@@ -6,7 +8,20 @@ from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.utils import secure_filename
 
 from . import db
-from .models import Attachment, Category, Factory, Machine, ProductionLine, REPORT_STATUSES, Report, ReportComment, User
+from .models import (
+    Attachment,
+    Category,
+    Factory,
+    Machine,
+    MachineParameter,
+    MachineParameterReading,
+    PARAMETER_REPORT_TYPES,
+    ProductionLine,
+    REPORT_STATUSES,
+    Report,
+    ReportComment,
+    User,
+)
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
@@ -38,6 +53,36 @@ def delete_attachment_file(filename):
 def delete_report_files(report):
     for attachment in report.attachments:
         delete_attachment_file(attachment.filename)
+
+
+def build_parameter_stats(parameter):
+    readings = sorted(parameter.readings, key=lambda item: (item.changed_at, item.created_at), reverse=True)
+    if not readings:
+        return None
+
+    latest = readings[0]
+    previous = readings[1] if len(readings) > 1 else None
+    values = [reading.value for reading in readings]
+
+    if previous is None:
+        trend_label = "Sin historial"
+    elif latest.value > previous.value:
+        trend_label = "En alza"
+    elif latest.value < previous.value:
+        trend_label = "En baja"
+    else:
+        trend_label = "Estable"
+
+    return {
+        "parameter": parameter,
+        "latest": latest,
+        "previous": previous,
+        "average": mean(values),
+        "highest": max(values),
+        "lowest": min(values),
+        "trend_label": trend_label,
+        "history_count": len(readings),
+    }
 
 
 def uploaded_file(filename):
@@ -101,6 +146,105 @@ def reports():
         status_filter=status_filter,
         line_filter=line_filter,
     )
+
+
+@login_required
+def parameter_reports():
+    machines = Machine.query.order_by(Machine.name).all()
+    machine_cards = []
+
+    for machine in machines:
+        stats = [build_parameter_stats(parameter) for parameter in machine.parameter_definitions]
+        stats = [stat for stat in stats if stat]
+        latest_change = max((stat["latest"].changed_at for stat in stats), default=None)
+
+        machine_cards.append(
+            {
+                "machine": machine,
+                "parameter_count": len(stats),
+                "latest_change": latest_change,
+                "types": sorted({stat["parameter"].parameter_type for stat in stats}),
+            }
+        )
+
+    return render_template("parameter_reports.html", machine_cards=machine_cards)
+
+
+@login_required
+def parameter_report_create():
+    machines = Machine.query.filter_by(active=True).order_by(Machine.name).all()
+
+    if request.method == "POST":
+        machine_id = request.form.get("machine_id", type=int)
+        parameter_name = request.form.get("parameter_name", "").strip()
+        parameter_type = request.form.get("parameter_type", "").strip()
+        current_recipe = request.form.get("current_recipe", "").strip()
+        unit = request.form.get("unit", "").strip()
+        value = request.form.get("value", type=float)
+        changed_at_raw = request.form.get("changed_at", "").strip()
+
+        if not machine_id or not parameter_name or parameter_type not in PARAMETER_REPORT_TYPES or not current_recipe or not unit or value is None or not changed_at_raw:
+            flash("Completa maquina, tipo, nombre del parametro, receta actual, unidad, valor y fecha de cambio.", "error")
+            return render_template(
+                "parameter_report_form.html",
+                machines=machines,
+                parameter_types=PARAMETER_REPORT_TYPES,
+            )
+
+        changed_at = None
+        try:
+            changed_at = datetime.fromisoformat(changed_at_raw)
+        except ValueError:
+            flash("La fecha del cambio no es valida.", "error")
+            return render_template(
+                "parameter_report_form.html",
+                machines=machines,
+                parameter_types=PARAMETER_REPORT_TYPES,
+            )
+
+        parameter = MachineParameter.query.filter_by(
+            machine_id=machine_id,
+            name=parameter_name,
+            parameter_type=parameter_type,
+            unit=unit,
+        ).first()
+
+        if parameter is None:
+            parameter = MachineParameter(
+                machine_id=machine_id,
+                name=parameter_name,
+                parameter_type=parameter_type,
+                unit=unit,
+            )
+            db.session.add(parameter)
+            db.session.flush()
+
+        reading = MachineParameterReading(
+            parameter_id=parameter.id,
+            current_recipe=current_recipe,
+            value=value,
+            changed_at=changed_at,
+            created_by_id=current_user.id,
+        )
+        db.session.add(reading)
+        db.session.commit()
+        flash("Parametro registrado correctamente.", "success")
+        return redirect(url_for("parameter_report_machine", machine_id=machine_id))
+
+    return render_template(
+        "parameter_report_form.html",
+        machines=machines,
+        parameter_types=PARAMETER_REPORT_TYPES,
+    )
+
+
+@login_required
+def parameter_report_machine(machine_id):
+    machine = Machine.query.get_or_404(machine_id)
+    parameter_cards = [build_parameter_stats(parameter) for parameter in machine.parameter_definitions]
+    parameter_cards = [card for card in parameter_cards if card]
+    parameter_cards.sort(key=lambda card: (card["parameter"].parameter_type, card["parameter"].name.lower()))
+    return render_template("parameter_report_machine.html", machine=machine, parameter_cards=parameter_cards)
 
 
 @login_required
@@ -334,8 +478,8 @@ def delete_machine(machine_id):
         return redirect(url_for("reports"))
 
     machine = Machine.query.get_or_404(machine_id)
-    if machine.reports:
-        flash("No puedes eliminar una maquina que tiene reportes asociados.", "error")
+    if machine.reports or machine.parameter_definitions:
+        flash("No puedes eliminar una maquina que tiene reportes o parametros asociados.", "error")
     else:
         db.session.delete(machine)
         db.session.commit()
@@ -442,8 +586,8 @@ def delete_user(user_id):
     user = User.query.get_or_404(user_id)
     if user.id == current_user.id:
         flash("No puedes eliminar tu propio usuario mientras estas conectado.", "error")
-    elif user.reports:
-        flash("No puedes eliminar un usuario que tiene reportes asociados.", "error")
+    elif user.reports or MachineParameterReading.query.filter_by(created_by_id=user.id).first():
+        flash("No puedes eliminar un usuario que tiene reportes o parametros asociados.", "error")
     else:
         db.session.delete(user)
         db.session.commit()

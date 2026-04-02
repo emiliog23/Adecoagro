@@ -282,6 +282,18 @@ button,
   min-height: 72px;
 }
 
+.parameter-card {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.parameter-current {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent-dark);
+}
+
 .meta-list {
   list-style: none;
   padding: 0;

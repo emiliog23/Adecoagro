@@ -13,6 +13,11 @@ REPORT_STATUSES = [
     "Resuelto",
 ]
 
+PARAMETER_REPORT_TYPES = [
+    "Receta",
+    "Mecanico",
+]
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -69,6 +74,7 @@ class Machine(db.Model):
 
     line = db.relationship("ProductionLine", back_populates="machines")
     reports = db.relationship("Report", back_populates="machine", lazy=True)
+    parameter_definitions = db.relationship("MachineParameter", back_populates="machine", lazy=True)
 
 
 class Category(db.Model):
@@ -120,6 +126,37 @@ class ReportComment(db.Model):
 
     report = db.relationship("Report", back_populates="comments")
     created_by = db.relationship("User", back_populates="comments")
+
+
+class MachineParameter(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    parameter_type = db.Column(db.String(30), nullable=False)
+    unit = db.Column(db.String(20), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    machine_id = db.Column(db.Integer, db.ForeignKey("machine.id"), nullable=False)
+
+    machine = db.relationship("Machine", back_populates="parameter_definitions")
+    readings = db.relationship(
+        "MachineParameterReading",
+        back_populates="parameter",
+        cascade="all, delete-orphan",
+        lazy=True,
+        order_by="MachineParameterReading.changed_at.desc()",
+    )
+
+
+class MachineParameterReading(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    current_recipe = db.Column(db.String(150), nullable=False)
+    value = db.Column(db.Float, nullable=False)
+    changed_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    parameter_id = db.Column(db.Integer, db.ForeignKey("machine_parameter.id"), nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    parameter = db.relationship("MachineParameter", back_populates="readings")
+    created_by = db.relationship("User")
 
 
 @login_manager.user_loader

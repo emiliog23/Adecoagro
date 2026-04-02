@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Nuevo parametro | adecoagro{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Nuevo registro de parametro</h2>
+  <form method="post" class="form-grid">
+    <label>Maquina
+      <select name="machine_id" required>
+        <option value="">Seleccionar</option>
+        {% for machine in machines %}
+        <option value="{{ machine.id }}">{{ machine.line.name }} - {{ machine.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Tipo de parametro
+      <select name="parameter_type" required>
+        <option value="">Seleccionar</option>
+        {% for parameter_type in parameter_types %}
+        <option value="{{ parameter_type }}">{{ parameter_type }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Nombre del parametro
+      <input type="text" name="parameter_name" required placeholder="Ej: Altura de boquilla">
+    </label>
+    <label>Valor
+      <input type="number" name="value" step="0.01" required placeholder="Ej: 12.5">
+    </label>
+    <label>Unidad
+      <input type="text" name="unit" required placeholder="Ej: mm, W, %">
+    </label>
+    <label>Receta actual
+      <input type="text" name="current_recipe" required placeholder="Ej: Receta 250 ml">
+    </label>
+    <label>Fecha del cambio
+      <input type="datetime-local" name="changed_at" required>
+    </label>
+    <button type="submit">Guardar parametro</button>
+  </form>
+</section>
+{% endblock %}
