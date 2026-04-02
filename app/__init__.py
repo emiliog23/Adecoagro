@@ -43,6 +43,7 @@ def create_app():
     app.add_url_rule("/reportes/<int:report_id>/estado", view_func=routes.report_status_update, methods=["POST"])
     app.add_url_rule("/reportes/<int:report_id>/eliminar", view_func=routes.report_delete, methods=["POST"])
     app.add_url_rule("/reportes/eliminar-todos", view_func=routes.report_delete_all, methods=["POST"])
+    app.add_url_rule("/uploads/<path:filename>", view_func=routes.uploaded_file)
     app.add_url_rule("/admin", view_func=routes.admin_dashboard)
     app.add_url_rule("/admin/lineas", view_func=routes.manage_lines, methods=["GET", "POST"])
     app.add_url_rule("/admin/lineas/<int:line_id>/editar", view_func=routes.edit_line, methods=["POST"])

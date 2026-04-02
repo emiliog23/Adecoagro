@@ -1,7 +1,7 @@
 from pathlib import Path
 from uuid import uuid4
 
-from flask import current_app, flash, redirect, render_template, request, url_for
+from flask import current_app, flash, redirect, render_template, request, send_from_directory, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.utils import secure_filename
 
@@ -38,6 +38,10 @@ def delete_attachment_file(filename):
 def delete_report_files(report):
     for attachment in report.attachments:
         delete_attachment_file(attachment.filename)
+
+
+def uploaded_file(filename):
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
 
 
 def index():

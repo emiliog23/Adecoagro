@@ -34,8 +34,8 @@
   <h3>Imagenes adjuntas</h3>
   <div class="image-grid">
     {% for attachment in report.attachments %}
-    <a href="{{ url_for('static', filename='uploads/' + attachment.filename) }}" target="_blank" rel="noreferrer">
-      <img src="{{ url_for('static', filename='uploads/' + attachment.filename) }}" alt="{{ attachment.original_name }}">
+    <a href="{{ url_for('uploaded_file', filename=attachment.filename) }}" target="_blank" rel="noreferrer">
+      <img src="{{ url_for('uploaded_file', filename=attachment.filename) }}" alt="{{ attachment.original_name }}">
     </a>
     {% endfor %}
   </div>
