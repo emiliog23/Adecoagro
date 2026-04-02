@@ -2,6 +2,9 @@
 __pycache__/
 *.pyc
 instance/
+!instance/
+instance/*
+!instance/adecoagro.db
 data/
 app/static/uploads/
 .DS_Store
