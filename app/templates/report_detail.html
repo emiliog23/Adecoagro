@@ -42,8 +42,8 @@
 </section>
 {% endif %}
 
-{% if current_user.can_review_reports %}
 <section class="card">
+  {% if current_user.can_review_reports %}
   <h3>Cambiar estado</h3>
   <form method="post" action="{{ url_for('report_status_update', report_id=report.id) }}" class="inline-form">
     <select name="status">
@@ -53,13 +53,16 @@
     </select>
     <button type="submit">Actualizar</button>
   </form>
+  {% endif %}
   <h3>Comentarios del supervisor</h3>
+  {% if current_user.can_review_reports %}
   <form method="post" action="{{ url_for('report_detail', report_id=report.id) }}" class="form-grid">
     <label>Nuevo comentario
       <textarea name="comment" rows="4" placeholder="Agregar observacion, seguimiento o indicacion"></textarea>
     </label>
     <button type="submit">Guardar comentario</button>
   </form>
+  {% endif %}
   {% if report.comments %}
   <div class="comment-list">
     {% for comment in report.comments|sort(attribute='created_at', reverse=True) %}
@@ -78,5 +81,4 @@
   </form>
   {% endif %}
 </section>
-{% endif %}
 {% endblock %}
