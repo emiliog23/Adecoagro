@@ -282,18 +282,6 @@ button,
   min-height: 72px;
 }
 
-.parameter-card {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.parameter-current {
-  margin: 0;
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--accent-dark);
-}
-
 .meta-list {
   list-style: none;
   padding: 0;
@@ -356,11 +344,36 @@ table {
   border-collapse: collapse;
 }
 
+thead {
+  background: rgba(47, 107, 79, 0.08);
+}
+
 th,
 td {
   padding: 0.8rem;
   border-bottom: 1px solid var(--border);
   text-align: left;
+  vertical-align: middle;
+}
+
+.sheet-table {
+  min-width: 860px;
+}
+
+.parameter-sheet {
+  min-width: 1380px;
+}
+
+.numeric-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent-dark);
+  font-weight: 700;
 }
 
 @media (max-width: 760px) {

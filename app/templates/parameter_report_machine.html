@@ -10,29 +10,48 @@
   <a class="button-link" href="{{ url_for('parameter_report_create') }}">Cargar nuevo parametro</a>
 </section>
 
-<section class="report-grid">
-  {% for card in parameter_cards %}
-  <article class="card parameter-card">
-    <div class="report-card-top">
-      <span class="status-badge">{{ card.parameter.parameter_type }}</span>
-      <span class="muted">{{ card.history_count }} registros</span>
-    </div>
-    <h3>{{ card.parameter.name }}</h3>
-    <p class="parameter-current">{{ "%.2f"|format(card.latest.value) }} {{ card.parameter.unit }}</p>
-    <ul class="meta-list">
-      <li><strong>Receta actual:</strong> {{ card.latest.current_recipe }}</li>
-      <li><strong>Fecha del cambio:</strong> {{ card.latest.changed_at.strftime('%d/%m/%Y %H:%M') }}</li>
-      <li><strong>Promedio historico:</strong> {{ "%.2f"|format(card.average) }} {{ card.parameter.unit }}</li>
-      <li><strong>Ultimo parametro:</strong> {% if card.previous %}{{ "%.2f"|format(card.previous.value) }} {{ card.parameter.unit }}{% else %}Sin dato previo{% endif %}</li>
-      <li><strong>Tendencia:</strong> {{ card.trend_label }}</li>
-      <li><strong>Valor mas alto:</strong> {{ "%.2f"|format(card.highest) }} {{ card.parameter.unit }}</li>
-      <li><strong>Valor mas bajo:</strong> {{ "%.2f"|format(card.lowest) }} {{ card.parameter.unit }}</li>
-    </ul>
-  </article>
-  {% else %}
-  <section class="card">
-    <p>Esta maquina aun no tiene parametros cargados.</p>
-  </section>
-  {% endfor %}
+<section class="card">
+  <div class="table-wrap">
+    <table class="sheet-table parameter-sheet">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Parametro</th>
+          <th>Valor actual</th>
+          <th>Unidad</th>
+          <th>Receta actual</th>
+          <th>Fecha cambio</th>
+          <th>Promedio historico</th>
+          <th>Ultimo parametro</th>
+          <th>Tendencia</th>
+          <th>Valor mas alto</th>
+          <th>Valor mas bajo</th>
+          <th>Registros</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in parameter_cards %}
+        <tr>
+          <td>{{ card.parameter.parameter_type }}</td>
+          <td>{{ card.parameter.name }}</td>
+          <td class="numeric-cell">{{ "%.2f"|format(card.latest.value) }}</td>
+          <td>{{ card.parameter.unit }}</td>
+          <td>{{ card.latest.current_recipe }}</td>
+          <td>{{ card.latest.changed_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td class="numeric-cell">{{ "%.2f"|format(card.average) }}</td>
+          <td class="numeric-cell">{% if card.previous %}{{ "%.2f"|format(card.previous.value) }}{% else %}Sin dato previo{% endif %}</td>
+          <td>{{ card.trend_label }}</td>
+          <td class="numeric-cell">{{ "%.2f"|format(card.highest) }}</td>
+          <td class="numeric-cell">{{ "%.2f"|format(card.lowest) }}</td>
+          <td class="numeric-cell">{{ card.history_count }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="12">Esta maquina aun no tiene parametros cargados.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 {% endblock %}
