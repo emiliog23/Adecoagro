@@ -420,14 +420,35 @@ td:last-child {
   flex-wrap: wrap;
   gap: 0.55rem;
   align-items: center;
+  justify-content: space-between;
   padding: 0.35rem 0.45rem;
   border-bottom: 1px solid var(--border);
   background: #f6f2ea;
   font-size: 0.82rem;
 }
 
+.sheet-label-copy,
+.sheet-delete-form {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .sheet-label-row strong {
   font-size: 0.9rem;
+}
+
+.sheet-delete-form {
+  margin: 0;
+}
+
+.compact-danger {
+  width: auto;
+  min-width: 0;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.78rem;
+  border-radius: 8px;
 }
 
 .analysis-wrap {

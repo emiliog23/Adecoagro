@@ -26,9 +26,17 @@
     {% for card in parameter_cards %}
     <section class="parameter-sheet-block">
       <div class="sheet-label-row">
-        <strong>{{ card.parameter.name }}</strong>
-        <span>{{ card.parameter.parameter_type }}</span>
-        <span>{{ card.parameter.unit }}</span>
+        <div class="sheet-label-copy">
+          <strong>{{ card.parameter.name }}</strong>
+          <span>{{ card.parameter.parameter_type }}</span>
+          <span>{{ card.parameter.unit }}</span>
+        </div>
+        {% if current_user.is_superadmin %}
+        <form method="post" action="{{ url_for('parameter_delete', parameter_id=card.parameter.id) }}" class="sheet-delete-form">
+          <input type="hidden" name="recipe_filter" value="{{ recipe_filter }}">
+          <button type="submit" class="danger-button compact-danger">Eliminar parametro</button>
+        </form>
+        {% endif %}
       </div>
       <div class="table-wrap">
         <table class="sheet-table compact-sheet">

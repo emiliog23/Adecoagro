@@ -309,6 +309,24 @@ def parameter_report_machine(machine_id):
 
 
 @login_required
+def parameter_delete(parameter_id):
+    if not current_user.is_superadmin:
+        flash("Solo un superadmin puede eliminar parametros.", "error")
+        return redirect(url_for("parameter_reports"))
+
+    parameter = MachineParameter.query.get_or_404(parameter_id)
+    machine_id = parameter.machine_id
+    recipe_filter = request.form.get("recipe_filter", "").strip()
+    db.session.delete(parameter)
+    db.session.commit()
+    flash("Parametro eliminado junto con todo su historial.", "success")
+
+    if recipe_filter:
+        return redirect(url_for("parameter_report_machine", machine_id=machine_id, recipe=recipe_filter))
+    return redirect(url_for("parameter_report_machine", machine_id=machine_id))
+
+
+@login_required
 def report_create():
     lines = ProductionLine.query.filter_by(active=True).order_by(ProductionLine.name).all()
     machines = Machine.query.filter_by(active=True).order_by(Machine.name).all()
