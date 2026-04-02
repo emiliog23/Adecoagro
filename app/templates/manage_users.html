@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Usuarios | adecoagro{% endblock %}
+{% block content %}
+<section class="split-layout">
+  <article class="card">
+    <h2>Nuevo usuario</h2>
+    <form method="post" class="form-grid">
+      <label>Usuario
+        <input type="text" name="username" required>
+      </label>
+      <label>Nombre completo
+        <input type="text" name="full_name" required>
+      </label>
+      <label>Clave
+        <input type="password" name="password" required>
+      </label>
+      <label>Rol
+        <select name="role">
+          <option value="usuario">Usuario</option>
+          <option value="supervisor">Supervisor</option>
+          <option value="admin">Admin</option>
+        </select>
+      </label>
+      <button type="submit">Crear usuario</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h2>Usuarios existentes</h2>
+    {% for user in users %}
+    <div class="admin-item">
+      <form method="post" action="{{ url_for('edit_user', user_id=user.id) }}" class="inline-edit user-edit">
+        <strong>{{ user.username }}</strong>
+        <input type="text" name="full_name" value="{{ user.full_name }}" required>
+        <select name="role">
+          <option value="usuario" {% if user.role == 'usuario' %}selected{% endif %}>Usuario</option>
+          <option value="supervisor" {% if user.role == 'supervisor' %}selected{% endif %}>Supervisor</option>
+          <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+        </select>
+        <input type="password" name="password" placeholder="Nueva clave opcional">
+        <button type="submit">Guardar</button>
+      </form>
+      <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}">
+        <button type="submit" class="danger-button">Eliminar</button>
+      </form>
+    </div>
+    {% endfor %}
+  </article>
+</section>
+{% endblock %}

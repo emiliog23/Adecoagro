@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}adecoagro{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-logo" src="{{ url_for('static', filename='logo.jpg') }}" alt="Logo adecoagro">
+        <div class="brand-copy">
+          <p class="eyebrow">Sistema de reportes</p>
+          <p class="subtitle">Esteril 2</p>
+        </div>
+      </div>
+      {% if current_user.is_authenticated %}
+      <nav class="nav">
+        <a href="{{ url_for('reports') }}">Reportes</a>
+        <a href="{{ url_for('report_create') }}">Nuevo reporte</a>
+        {% if current_user.can_review_reports %}
+        <a href="{{ url_for('admin_dashboard') }}">Administracion</a>
+        {% endif %}
+        <a href="{{ url_for('logout') }}">Salir</a>
+      </nav>
+      {% endif %}
+    </header>
+
+    <main class="container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <section class="flash-stack">
+            {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          </section>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

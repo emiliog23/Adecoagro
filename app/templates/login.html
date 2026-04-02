@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Ingresar | adecoagro{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h2>Ingresar al sistema</h2>
+  <p class="muted">Selecciona un usuario de la lista y escribe su clave.</p>
+  <form method="post" class="form-grid">
+    <label>Usuario
+      <select name="username" required>
+        <option value="">Seleccionar usuario</option>
+        {% for user in users %}
+        <option value="{{ user.username }}">{{ user.full_name }} ({{ user.username }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Contrasena
+      <input type="password" name="password" required>
+    </label>
+    <button type="submit">Entrar</button>
+  </form>
+</section>
+{% endblock %}

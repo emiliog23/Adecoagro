@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Maquinas | adecoagro{% endblock %}
+{% block content %}
+<section class="split-layout">
+  <article class="card">
+    <h2>Nueva maquina</h2>
+    <form method="post" class="form-grid">
+      <label>Nombre
+        <input type="text" name="name" required>
+      </label>
+      <label>Linea
+        <select name="line_id" required>
+          {% for line in lines %}
+          <option value="{{ line.id }}">{{ line.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="checkbox"><input type="checkbox" name="active" checked> Activa</label>
+      <button type="submit">Agregar maquina</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h2>Maquinas existentes</h2>
+    {% for machine in machines %}
+    <div class="admin-item">
+      <form method="post" action="{{ url_for('edit_machine', machine_id=machine.id) }}" class="inline-edit">
+        <input type="text" name="name" value="{{ machine.name }}" required>
+        <select name="line_id">
+          {% for line in lines %}
+          <option value="{{ line.id }}" {% if machine.line_id == line.id %}selected{% endif %}>{{ line.name }}</option>
+          {% endfor %}
+        </select>
+        <label class="checkbox"><input type="checkbox" name="active" {% if machine.active %}checked{% endif %}> Activa</label>
+        <button type="submit">Guardar</button>
+      </form>
+      <form method="post" action="{{ url_for('delete_machine', machine_id=machine.id) }}">
+        <button type="submit" class="danger-button">Eliminar</button>
+      </form>
+    </div>
+    {% endfor %}
+  </article>
+</section>
+{% endblock %}

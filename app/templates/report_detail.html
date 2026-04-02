@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Reporte #{{ report.id }} | adecoagro{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">Reporte #{{ report.id }}</p>
+      <h2>{{ report.title }}</h2>
+      <p class="muted">{{ report.created_at.strftime('%d/%m/%Y %H:%M') }} por {{ report.created_by.full_name }}</p>
+    </div>
+    <span class="status-badge large">{{ report.status }}</span>
+  </div>
+  <p>{{ report.description }}</p>
+  <ul class="meta-list">
+    <li><strong>Categoria:</strong> {{ report.category.name }}</li>
+    <li><strong>Linea:</strong> {{ report.machine.line.name }}</li>
+    <li><strong>Maquina:</strong> {{ report.machine.name }}</li>
+    <li><strong>Tiempo aproximado de parada:</strong> {% if report.downtime_minutes is not none %}{{ report.downtime_minutes }} min{% else %}No informado{% endif %}</li>
+  </ul>
+</section>
+
+{% if report.actions_taken or report.spare_parts_used %}
+<section class="card">
+  <h3>Detalle operativo</h3>
+  <ul class="meta-list">
+    <li><strong>Acciones tomadas:</strong> {{ report.actions_taken or "No informado" }}</li>
+    <li><strong>Repuestos usados:</strong> {{ report.spare_parts_used or "No informado" }}</li>
+  </ul>
+</section>
+{% endif %}
+
+{% if report.attachments %}
+<section class="card">
+  <h3>Imagenes adjuntas</h3>
+  <div class="image-grid">
+    {% for attachment in report.attachments %}
+    <a href="{{ url_for('static', filename='uploads/' + attachment.filename) }}" target="_blank" rel="noreferrer">
+      <img src="{{ url_for('static', filename='uploads/' + attachment.filename) }}" alt="{{ attachment.original_name }}">
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if current_user.can_review_reports %}
+<section class="card">
+  <h3>Cambiar estado</h3>
+  <form method="post" action="{{ url_for('report_status_update', report_id=report.id) }}" class="inline-form">
+    <select name="status">
+      {% for status in statuses %}
+      <option value="{{ status }}" {% if report.status == status %}selected{% endif %}>{{ status }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Actualizar</button>
+  </form>
+  <h3>Comentarios del supervisor</h3>
+  <form method="post" action="{{ url_for('report_detail', report_id=report.id) }}" class="form-grid">
+    <label>Nuevo comentario
+      <textarea name="comment" rows="4" placeholder="Agregar observacion, seguimiento o indicacion"></textarea>
+    </label>
+    <button type="submit">Guardar comentario</button>
+  </form>
+  {% if report.comments %}
+  <div class="comment-list">
+    {% for comment in report.comments|sort(attribute='created_at', reverse=True) %}
+    <article class="comment-card">
+      <p>{{ comment.content }}</p>
+      <p class="muted">{{ comment.created_by.full_name }} · {{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">Aun no hay comentarios registrados.</p>
+  {% endif %}
+  {% if current_user.can_review_reports %}
+  <form method="post" action="{{ url_for('report_delete', report_id=report.id) }}">
+    <button type="submit" class="danger-button">Eliminar reporte</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

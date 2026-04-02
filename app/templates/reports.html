@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Reportes | adecoagro{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h2>Reportes de problemas</h2>
+    <p class="muted">Carga, seguimiento y revision de incidencias de Esteril 2.</p>
+  </div>
+  <a class="button-link" href="{{ url_for('report_create') }}">Crear reporte</a>
+</section>
+
+<section class="card">
+  <form method="get" class="filters">
+    <label>Estado
+      <select name="status">
+        <option value="">Todos</option>
+        {% for status in statuses %}
+        <option value="{{ status }}" {% if status_filter == status %}selected{% endif %}>{{ status }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Linea
+      <select name="line_id">
+        <option value="">Todas</option>
+        {% for line in lines %}
+        <option value="{{ line.id }}" {% if line_filter == line.id %}selected{% endif %}>{{ line.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Filtrar</button>
+  </form>
+</section>
+
+<section class="report-grid">
+  {% for report in reports %}
+  <article class="card report-card">
+    <div class="report-card-top">
+      <span class="status-badge">{{ report.status }}</span>
+      <span class="muted">#{{ report.id }}</span>
+    </div>
+    <h3>{{ report.title }}</h3>
+    <p>{{ report.description[:160] }}{% if report.description|length > 160 %}...{% endif %}</p>
+    <ul class="meta-list">
+      <li><strong>Categoria:</strong> {{ report.category.name }}</li>
+      <li><strong>Linea:</strong> {{ report.machine.line.name }}</li>
+      <li><strong>Maquina:</strong> {{ report.machine.name }}</li>
+      <li><strong>Usuario:</strong> {{ report.created_by.full_name }}</li>
+    </ul>
+    <div class="action-row">
+      <a class="button-link secondary" href="{{ url_for('report_detail', report_id=report.id) }}">Ver detalle</a>
+      {% if current_user.can_review_reports %}
+      <form method="post" action="{{ url_for('report_delete', report_id=report.id) }}">
+        <button type="submit" class="danger-button">Eliminar</button>
+      </form>
+      {% endif %}
+    </div>
+  </article>
+  {% else %}
+  <section class="card">
+    <p>No hay reportes cargados con los filtros actuales.</p>
+  </section>
+  {% endfor %}
+</section>
+{% endblock %}

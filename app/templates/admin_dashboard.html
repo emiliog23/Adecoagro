@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Administracion | adecoagro{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h2>Panel de administracion</h2>
+    <p class="muted">Gestion de estructura, usuarios y ultimos reportes.</p>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <article class="card stat-card"><strong>{{ factories|length }}</strong><span>Fabricas</span></article>
+  <article class="card stat-card"><strong>{{ lines|length }}</strong><span>Lineas</span></article>
+  <article class="card stat-card"><strong>{{ machines|length }}</strong><span>Maquinas</span></article>
+  <article class="card stat-card"><strong>{{ users|length }}</strong><span>Usuarios</span></article>
+</section>
+
+<section class="admin-links">
+  <a class="button-link" href="{{ url_for('manage_lines') }}">Gestionar lineas</a>
+  <a class="button-link" href="{{ url_for('manage_machines') }}">Gestionar maquinas</a>
+  <a class="button-link" href="{{ url_for('manage_categories') }}">Gestionar categorias</a>
+  <a class="button-link" href="{{ url_for('manage_users') }}">Gestionar usuarios</a>
+</section>
+
+<section class="card">
+  <h3>Acciones rapidas</h3>
+  <form method="post" action="{{ url_for('report_delete_all') }}">
+    <button type="submit" class="danger-button">Eliminar todos los reportes</button>
+  </form>
+</section>
+
+<section class="card">
+  <h3>Ultimos reportes</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Titulo</th>
+          <th>Estado</th>
+          <th>Maquina</th>
+          <th>Usuario</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for report in reports %}
+        <tr>
+          <td>{{ report.id }}</td>
+          <td><a href="{{ url_for('report_detail', report_id=report.id) }}">{{ report.title }}</a></td>
+          <td>{{ report.status }}</td>
+          <td>{{ report.machine.name }}</td>
+          <td>{{ report.created_by.username }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

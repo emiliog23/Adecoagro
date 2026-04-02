@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Lineas | adecoagro{% endblock %}
+{% block content %}
+<section class="split-layout">
+  <article class="card">
+    <h2>Nueva linea</h2>
+    <form method="post" class="form-grid">
+      <label>Nombre
+        <input type="text" name="name" required>
+      </label>
+      <label>Fabrica
+        <select name="factory_id" required>
+          {% for factory in factories %}
+          <option value="{{ factory.id }}">{{ factory.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="checkbox"><input type="checkbox" name="active" checked> Activa</label>
+      <button type="submit">Agregar linea</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h2>Lineas existentes</h2>
+    {% for line in lines %}
+    <div class="admin-item">
+      <form method="post" action="{{ url_for('edit_line', line_id=line.id) }}" class="inline-edit">
+        <input type="text" name="name" value="{{ line.name }}" required>
+        <label class="checkbox"><input type="checkbox" name="active" {% if line.active %}checked{% endif %}> Activa</label>
+        <button type="submit">Guardar</button>
+      </form>
+      <form method="post" action="{{ url_for('delete_line', line_id=line.id) }}">
+        <button type="submit" class="danger-button">Eliminar</button>
+      </form>
+    </div>
+    {% endfor %}
+  </article>
+</section>
+{% endblock %}
