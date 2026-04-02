@@ -150,12 +150,20 @@ def reports():
 
 @login_required
 def parameter_reports():
+    recipe_filter = request.args.get("recipe", "").strip()
     machines = Machine.query.order_by(Machine.name).all()
     machine_cards = []
+    available_recipes = set()
 
     for machine in machines:
         stats = [build_parameter_stats(parameter) for parameter in machine.parameter_definitions]
         stats = [stat for stat in stats if stat]
+        machine_recipes = sorted({stat["latest"].current_recipe for stat in stats})
+        available_recipes.update(machine_recipes)
+
+        if recipe_filter and recipe_filter not in machine_recipes:
+            continue
+
         latest_change = max((stat["latest"].changed_at for stat in stats), default=None)
 
         machine_cards.append(
@@ -164,10 +172,16 @@ def parameter_reports():
                 "parameter_count": len(stats),
                 "latest_change": latest_change,
                 "types": sorted({stat["parameter"].parameter_type for stat in stats}),
+                "recipes": machine_recipes,
             }
         )
 
-    return render_template("parameter_reports.html", machine_cards=machine_cards)
+    return render_template(
+        "parameter_reports.html",
+        machine_cards=machine_cards,
+        available_recipes=sorted(available_recipes),
+        recipe_filter=recipe_filter,
+    )
 
 
 @login_required
@@ -241,10 +255,20 @@ def parameter_report_create():
 @login_required
 def parameter_report_machine(machine_id):
     machine = Machine.query.get_or_404(machine_id)
+    recipe_filter = request.args.get("recipe", "").strip()
     parameter_cards = [build_parameter_stats(parameter) for parameter in machine.parameter_definitions]
     parameter_cards = [card for card in parameter_cards if card]
+    available_recipes = sorted({card["latest"].current_recipe for card in parameter_cards})
+    if recipe_filter:
+        parameter_cards = [card for card in parameter_cards if card["latest"].current_recipe == recipe_filter]
     parameter_cards.sort(key=lambda card: (card["parameter"].parameter_type, card["parameter"].name.lower()))
-    return render_template("parameter_report_machine.html", machine=machine, parameter_cards=parameter_cards)
+    return render_template(
+        "parameter_report_machine.html",
+        machine=machine,
+        parameter_cards=parameter_cards,
+        available_recipes=available_recipes,
+        recipe_filter=recipe_filter,
+    )
 
 
 @login_required
