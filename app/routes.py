@@ -152,26 +152,32 @@ def logout():
 def reports():
     status_filter = request.args.get("status", "").strip()
     line_filter = request.args.get("line_id", type=int)
+    category_filter = request.args.get("category_id", type=int)
 
     query = Report.query.order_by(Report.created_at.desc())
     if status_filter:
         query = query.filter_by(status=status_filter)
     if line_filter:
         query = query.join(Machine).filter(Machine.line_id == line_filter)
+    if category_filter:
+        query = query.filter(Report.category_id == category_filter)
 
     if not current_user.can_review_reports:
         query = query.filter_by(created_by_id=current_user.id)
 
     all_reports = query.all()
     lines = ProductionLine.query.order_by(ProductionLine.name).all()
+    categories = Category.query.order_by(Category.name).all()
 
     return render_template(
         "reports.html",
         reports=all_reports,
         statuses=REPORT_STATUSES,
         lines=lines,
+        categories=categories,
         status_filter=status_filter,
         line_filter=line_filter,
+        category_filter=category_filter,
     )
 
 

@@ -27,6 +27,14 @@
         {% endfor %}
       </select>
     </label>
+    <label>Categoria
+      <select name="category_id">
+        <option value="">Todas</option>
+        {% for category in categories %}
+        <option value="{{ category.id }}" {% if category_filter == category.id %}selected{% endif %}>{{ category.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
     <button type="submit">Filtrar</button>
   </form>
 </section>

@@ -95,6 +95,33 @@ a {
   align-items: center;
 }
 
+.topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.user-chip {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(113, 101, 87, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 253, 248, 0.9);
+  text-align: right;
+}
+
+.user-chip strong {
+  font-size: 0.9rem;
+}
+
+.user-chip span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .nav a {
   font-weight: 600;
 }
@@ -473,6 +500,15 @@ td:last-child {
 
   .nav {
     width: 100%;
+  }
+
+  .topbar-actions,
+  .user-chip {
+    width: 100%;
+  }
+
+  .user-chip {
+    text-align: left;
   }
 
   .sheet-filters {
