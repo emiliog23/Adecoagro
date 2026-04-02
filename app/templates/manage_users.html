@@ -16,9 +16,9 @@
       </label>
       <label>Rol
         <select name="role">
-          <option value="usuario">Usuario</option>
-          <option value="supervisor">Supervisor</option>
-          <option value="admin">Admin</option>
+          {% for role in assignable_roles %}
+          <option value="{{ role }}">{{ role|capitalize }}</option>
+          {% endfor %}
         </select>
       </label>
       <button type="submit">Crear usuario</button>
@@ -33,9 +33,12 @@
         <strong>{{ user.username }}</strong>
         <input type="text" name="full_name" value="{{ user.full_name }}" required>
         <select name="role">
-          <option value="usuario" {% if user.role == 'usuario' %}selected{% endif %}>Usuario</option>
-          <option value="supervisor" {% if user.role == 'supervisor' %}selected{% endif %}>Supervisor</option>
-          <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+          {% for role in assignable_roles %}
+          <option value="{{ role }}" {% if user.role == role %}selected{% endif %}>{{ role|capitalize }}</option>
+          {% endfor %}
+          {% if user.role == 'superadmin' and 'superadmin' not in assignable_roles %}
+          <option value="superadmin" selected>Superadmin</option>
+          {% endif %}
         </select>
         <input type="password" name="password" placeholder="Nueva clave opcional">
         <button type="submit">Guardar</button>

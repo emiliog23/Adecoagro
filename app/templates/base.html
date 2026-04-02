@@ -24,7 +24,7 @@
         <a href="{{ url_for('parameter_reports') }}">Parametros</a>
         <a href="{{ url_for('report_create') }}">Nuevo reporte</a>
         <a href="{{ url_for('parameter_report_create') }}">Nuevo parametro</a>
-        {% if current_user.can_review_reports %}
+        {% if current_user.can_manage_admin %}
         <a href="{{ url_for('admin_dashboard') }}">Administracion</a>
         {% endif %}
         <a href="{{ url_for('logout') }}">Salir</a>

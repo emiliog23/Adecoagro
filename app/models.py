@@ -18,6 +18,13 @@ PARAMETER_REPORT_TYPES = [
     "Mecanico",
 ]
 
+USER_ROLES = [
+    "usuario",
+    "supervisor",
+    "admin",
+    "superadmin",
+]
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -38,15 +45,23 @@ class User(UserMixin, db.Model):
 
     @property
     def is_admin(self):
-        return self.role == "admin"
+        return self.role in {"admin", "superadmin"}
+
+    @property
+    def is_superadmin(self):
+        return self.role == "superadmin"
 
     @property
     def is_supervisor(self):
-        return self.role == "supervisor"
+        return self.role in {"supervisor", "admin", "superadmin"}
 
     @property
     def can_review_reports(self):
-        return self.role in {"admin", "supervisor"}
+        return self.role in {"supervisor", "admin", "superadmin"}
+
+    @property
+    def can_manage_admin(self):
+        return self.role in {"admin", "superadmin"}
 
 
 class Factory(db.Model):
@@ -198,6 +213,11 @@ def seed_data():
         admin = User(username="admin", full_name="Administrador General", role="admin")
         admin.set_password("admin123")
         db.session.add(admin)
+
+    if not User.query.filter_by(username="superadmin").first():
+        superadmin = User(username="superadmin", full_name="Super Administrador", role="superadmin")
+        superadmin.set_password("superadmin123")
+        db.session.add(superadmin)
 
     if not User.query.filter_by(username="supervisor").first():
         supervisor = User(username="supervisor", full_name="Supervisor Turno", role="supervisor")

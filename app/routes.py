@@ -20,6 +20,7 @@ from .models import (
     REPORT_STATUSES,
     Report,
     ReportComment,
+    USER_ROLES,
     User,
 )
 
@@ -31,8 +32,8 @@ def allowed_file(filename):
 
 
 def admin_required():
-    if not current_user.is_authenticated or not current_user.can_review_reports:
-        flash("Solo administracion o supervision puede acceder a esa seccion.", "error")
+    if not current_user.is_authenticated or not current_user.can_manage_admin:
+        flash("Solo administracion puede acceder a esa seccion.", "error")
         return False
     return True
 
@@ -42,6 +43,29 @@ def reviewer_required():
         flash("Solo administracion o supervision puede realizar esa accion.", "error")
         return False
     return True
+
+
+def delete_report_record(report):
+    delete_report_files(report)
+    db.session.delete(report)
+
+
+def purge_machine(machine):
+    for report in list(machine.reports):
+        delete_report_record(report)
+    for parameter in list(machine.parameter_definitions):
+        db.session.delete(parameter)
+    db.session.delete(machine)
+
+
+def purge_user(user):
+    for comment in list(user.comments):
+        db.session.delete(comment)
+    for reading in list(MachineParameterReading.query.filter_by(created_by_id=user.id).all()):
+        db.session.delete(reading)
+    for report in list(user.reports):
+        delete_report_record(report)
+    db.session.delete(user)
 
 
 def delete_attachment_file(filename):
@@ -387,8 +411,7 @@ def report_delete(report_id):
         return redirect(url_for("reports"))
 
     report = Report.query.get_or_404(report_id)
-    delete_report_files(report)
-    db.session.delete(report)
+    delete_report_record(report)
     db.session.commit()
     flash("Reporte eliminado.", "success")
     return redirect(url_for("reports"))
@@ -402,8 +425,7 @@ def report_delete_all():
     all_reports = Report.query.all()
     deleted_count = len(all_reports)
     for report in all_reports:
-        delete_report_files(report)
-        db.session.delete(report)
+        delete_report_record(report)
     db.session.commit()
     flash(f"Se eliminaron {deleted_count} reportes.", "success")
     return redirect(url_for("admin_dashboard"))
@@ -466,6 +488,13 @@ def delete_line(line_id):
 
     line = ProductionLine.query.get_or_404(line_id)
     if line.machines:
+        if current_user.is_superadmin:
+            for machine in list(line.machines):
+                purge_machine(machine)
+            db.session.delete(line)
+            db.session.commit()
+            flash("Linea eliminada junto con sus maquinas y datos asociados.", "success")
+            return redirect(url_for("manage_lines"))
         flash("No puedes eliminar una linea que todavia tiene maquinas asociadas.", "error")
     else:
         db.session.delete(line)
@@ -516,6 +545,11 @@ def delete_machine(machine_id):
 
     machine = Machine.query.get_or_404(machine_id)
     if machine.reports or machine.parameter_definitions:
+        if current_user.is_superadmin:
+            purge_machine(machine)
+            db.session.commit()
+            flash("Maquina eliminada junto con sus reportes y parametros.", "success")
+            return redirect(url_for("manage_machines"))
         flash("No puedes eliminar una maquina que tiene reportes o parametros asociados.", "error")
     else:
         db.session.delete(machine)
@@ -563,6 +597,13 @@ def delete_category(category_id):
 
     category = Category.query.get_or_404(category_id)
     if category.reports:
+        if current_user.is_superadmin:
+            for report in list(category.reports):
+                delete_report_record(report)
+            db.session.delete(category)
+            db.session.commit()
+            flash("Categoria eliminada junto con sus reportes.", "success")
+            return redirect(url_for("manage_categories"))
         flash("No puedes eliminar una categoria que tiene reportes asociados.", "error")
     else:
         db.session.delete(category)
@@ -582,8 +623,10 @@ def manage_users():
         password = request.form.get("password", "").strip()
         role = request.form.get("role", "usuario").strip()
 
-        if not username or not full_name or not password or role not in {"admin", "supervisor", "usuario"}:
+        if not username or not full_name or not password or role not in USER_ROLES:
             flash("Completa usuario, nombre, clave y rol validos.", "error")
+        elif role == "superadmin" and not current_user.is_superadmin:
+            flash("Solo un superadmin puede crear otro superadmin.", "error")
         elif User.query.filter_by(username=username).first():
             flash("Ese usuario ya existe.", "error")
         else:
@@ -594,7 +637,8 @@ def manage_users():
             flash("Usuario creado.", "success")
         return redirect(url_for("manage_users"))
 
-    return render_template("manage_users.html", users=User.query.order_by(User.full_name).all())
+    assignable_roles = USER_ROLES if current_user.is_superadmin else [role for role in USER_ROLES if role != "superadmin"]
+    return render_template("manage_users.html", users=User.query.order_by(User.full_name).all(), assignable_roles=assignable_roles)
 
 
 @login_required
@@ -605,7 +649,13 @@ def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     user.full_name = request.form.get("full_name", user.full_name).strip() or user.full_name
     role = request.form.get("role", user.role).strip()
-    if role in {"admin", "supervisor", "usuario"}:
+    if user.role == "superadmin" and not current_user.is_superadmin:
+        flash("Solo un superadmin puede editar a otro superadmin.", "error")
+        return redirect(url_for("manage_users"))
+    if role == "superadmin" and not current_user.is_superadmin:
+        flash("Solo un superadmin puede asignar ese rol.", "error")
+        return redirect(url_for("manage_users"))
+    if role in USER_ROLES:
         user.role = role
     new_password = request.form.get("password", "").strip()
     if new_password:
@@ -623,7 +673,14 @@ def delete_user(user_id):
     user = User.query.get_or_404(user_id)
     if user.id == current_user.id:
         flash("No puedes eliminar tu propio usuario mientras estas conectado.", "error")
+    elif user.role == "superadmin" and not current_user.is_superadmin:
+        flash("Solo un superadmin puede eliminar a otro superadmin.", "error")
     elif user.reports or MachineParameterReading.query.filter_by(created_by_id=user.id).first():
+        if current_user.is_superadmin:
+            purge_user(user)
+            db.session.commit()
+            flash("Usuario eliminado junto con todos sus datos asociados.", "success")
+            return redirect(url_for("manage_users"))
         flash("No puedes eliminar un usuario que tiene reportes o parametros asociados.", "error")
     else:
         db.session.delete(user)
