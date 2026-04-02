@@ -55,8 +55,10 @@ def delete_report_files(report):
         delete_attachment_file(attachment.filename)
 
 
-def build_parameter_stats(parameter):
+def build_parameter_stats(parameter, recipe_filter=""):
     readings = sorted(parameter.readings, key=lambda item: (item.changed_at, item.created_at), reverse=True)
+    if recipe_filter:
+        readings = [reading for reading in readings if reading.current_recipe == recipe_filter]
     if not readings:
         return None
 
@@ -67,9 +69,9 @@ def build_parameter_stats(parameter):
     if previous is None:
         trend_label = "Sin historial"
     elif latest.value > previous.value:
-        trend_label = "En alza"
+        trend_label = "Positivo"
     elif latest.value < previous.value:
-        trend_label = "En baja"
+        trend_label = "Negativo"
     else:
         trend_label = "Estable"
 
@@ -82,6 +84,7 @@ def build_parameter_stats(parameter):
         "lowest": min(values),
         "trend_label": trend_label,
         "history_count": len(readings),
+        "readings": readings,
     }
 
 
@@ -156,9 +159,15 @@ def parameter_reports():
     available_recipes = set()
 
     for machine in machines:
-        stats = [build_parameter_stats(parameter) for parameter in machine.parameter_definitions]
+        stats = [build_parameter_stats(parameter, recipe_filter) for parameter in machine.parameter_definitions]
         stats = [stat for stat in stats if stat]
-        machine_recipes = sorted({stat["latest"].current_recipe for stat in stats})
+        machine_recipes = sorted(
+            {
+                reading.current_recipe
+                for parameter in machine.parameter_definitions
+                for reading in parameter.readings
+            }
+        )
         available_recipes.update(machine_recipes)
 
         if recipe_filter and recipe_filter not in machine_recipes:
@@ -256,11 +265,15 @@ def parameter_report_create():
 def parameter_report_machine(machine_id):
     machine = Machine.query.get_or_404(machine_id)
     recipe_filter = request.args.get("recipe", "").strip()
-    parameter_cards = [build_parameter_stats(parameter) for parameter in machine.parameter_definitions]
+    parameter_cards = [build_parameter_stats(parameter, recipe_filter) for parameter in machine.parameter_definitions]
     parameter_cards = [card for card in parameter_cards if card]
-    available_recipes = sorted({card["latest"].current_recipe for card in parameter_cards})
-    if recipe_filter:
-        parameter_cards = [card for card in parameter_cards if card["latest"].current_recipe == recipe_filter]
+    available_recipes = sorted(
+        {
+            reading.current_recipe
+            for parameter in machine.parameter_definitions
+            for reading in parameter.readings
+        }
+    )
     parameter_cards.sort(key=lambda card: (card["parameter"].parameter_type, card["parameter"].name.lower()))
     return render_template(
         "parameter_report_machine.html",

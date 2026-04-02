@@ -5,7 +5,7 @@
   <div>
     <p class="eyebrow">{{ machine.line.name }}</p>
     <h2>{{ machine.name }}</h2>
-    <p class="muted">Pagina de parametros historicos de la maquina.</p>
+    <p class="muted">Planillas historicas por parametro.</p>
   </div>
   <a class="button-link" href="{{ url_for('parameter_report_create') }}">Cargar nuevo parametro</a>
 </section>
@@ -22,47 +22,70 @@
     </label>
     <button type="submit">Filtrar</button>
   </form>
-  <div class="table-wrap">
-    <table class="sheet-table parameter-sheet">
-      <thead>
-        <tr>
-          <th>Tipo</th>
-          <th>Parametro</th>
-          <th>Valor actual</th>
-          <th>Unidad</th>
-          <th>Receta actual</th>
-          <th>Fecha cambio</th>
-          <th>Promedio historico</th>
-          <th>Ultimo parametro</th>
-          <th>Tendencia</th>
-          <th>Valor mas alto</th>
-          <th>Valor mas bajo</th>
-          <th>Registros</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for card in parameter_cards %}
-        <tr>
-          <td>{{ card.parameter.parameter_type }}</td>
-          <td>{{ card.parameter.name }}</td>
-          <td class="numeric-cell">{{ "%.2f"|format(card.latest.value) }}</td>
-          <td>{{ card.parameter.unit }}</td>
-          <td>{{ card.latest.current_recipe }}</td>
-          <td>{{ card.latest.changed_at.strftime('%d/%m/%Y %H:%M') }}</td>
-          <td class="numeric-cell">{{ "%.2f"|format(card.average) }}</td>
-          <td class="numeric-cell">{% if card.previous %}{{ "%.2f"|format(card.previous.value) }}{% else %}Sin dato previo{% endif %}</td>
-          <td>{{ card.trend_label }}</td>
-          <td class="numeric-cell">{{ "%.2f"|format(card.highest) }}</td>
-          <td class="numeric-cell">{{ "%.2f"|format(card.lowest) }}</td>
-          <td class="numeric-cell">{{ card.history_count }}</td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="12">No hay parametros para la receta seleccionada.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="sheet-stack">
+    {% for card in parameter_cards %}
+    <section class="parameter-sheet-block">
+      <div class="sheet-label-row">
+        <strong>{{ card.parameter.name }}</strong>
+        <span>{{ card.parameter.parameter_type }}</span>
+        <span>{{ card.parameter.unit }}</span>
+      </div>
+      <div class="table-wrap">
+        <table class="sheet-table compact-sheet">
+          <thead>
+            <tr>
+              <th>Fecha cambio</th>
+              <th>Receta</th>
+              <th>Valor</th>
+              <th>Unidad</th>
+              <th>Usuario</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for reading in card.readings %}
+            <tr>
+              <td>{{ reading.changed_at.strftime('%d/%m/%Y %H:%M') }}</td>
+              <td>{{ reading.current_recipe }}</td>
+              <td class="numeric-cell">{{ "%.2f"|format(reading.value) }}</td>
+              <td>{{ card.parameter.unit }}</td>
+              <td>{{ reading.created_by.full_name }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="table-wrap analysis-wrap">
+        <table class="sheet-table analysis-sheet">
+          <thead>
+            <tr>
+              <th>Valor actual</th>
+              <th>Promedio</th>
+              <th>Ultimo parametro</th>
+              <th>Tendencia</th>
+              <th>Maximo</th>
+              <th>Minimo</th>
+              <th>Registros</th>
+              <th>Receta actual</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="numeric-cell">{{ "%.2f"|format(card.latest.value) }}</td>
+              <td class="numeric-cell">{{ "%.2f"|format(card.average) }}</td>
+              <td class="numeric-cell">{% if card.previous %}{{ "%.2f"|format(card.previous.value) }}{% else %}Sin dato previo{% endif %}</td>
+              <td>{{ card.trend_label }}</td>
+              <td class="numeric-cell">{{ "%.2f"|format(card.highest) }}</td>
+              <td class="numeric-cell">{{ "%.2f"|format(card.lowest) }}</td>
+              <td class="numeric-cell">{{ card.history_count }}</td>
+              <td>{{ card.latest.current_recipe }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% else %}
+    <p class="muted">No hay parametros para la receta seleccionada.</p>
+    {% endfor %}
   </div>
 </section>
 {% endblock %}
