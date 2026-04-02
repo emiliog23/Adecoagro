@@ -35,6 +35,16 @@
         {% endfor %}
       </select>
     </label>
+    {% if current_user.can_review_reports %}
+    <label>Usuario
+      <select name="user_id">
+        <option value="">Todos</option>
+        {% for user in users %}
+        <option value="{{ user.id }}" {% if user_filter == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% endif %}
     <button type="submit">Filtrar</button>
   </form>
 </section>

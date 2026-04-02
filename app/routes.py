@@ -153,6 +153,7 @@ def reports():
     status_filter = request.args.get("status", "").strip()
     line_filter = request.args.get("line_id", type=int)
     category_filter = request.args.get("category_id", type=int)
+    user_filter = request.args.get("user_id", type=int)
 
     query = Report.query.order_by(Report.created_at.desc())
     if status_filter:
@@ -161,6 +162,8 @@ def reports():
         query = query.join(Machine).filter(Machine.line_id == line_filter)
     if category_filter:
         query = query.filter(Report.category_id == category_filter)
+    if user_filter and current_user.can_review_reports:
+        query = query.filter(Report.created_by_id == user_filter)
 
     if not current_user.can_review_reports:
         query = query.filter_by(created_by_id=current_user.id)
@@ -168,6 +171,7 @@ def reports():
     all_reports = query.all()
     lines = ProductionLine.query.order_by(ProductionLine.name).all()
     categories = Category.query.order_by(Category.name).all()
+    users = User.query.order_by(User.full_name).all() if current_user.can_review_reports else []
 
     return render_template(
         "reports.html",
@@ -175,9 +179,11 @@ def reports():
         statuses=REPORT_STATUSES,
         lines=lines,
         categories=categories,
+        users=users,
         status_filter=status_filter,
         line_filter=line_filter,
         category_filter=category_filter,
+        user_filter=user_filter,
     )
 
 
