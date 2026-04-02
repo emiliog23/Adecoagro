@@ -24,9 +24,13 @@
 
 <section class="card">
   <h3>Acciones rapidas</h3>
+  {% if current_user.is_superadmin %}
   <form method="post" action="{{ url_for('report_delete_all') }}">
     <button type="submit" class="danger-button">Eliminar todos los reportes</button>
   </form>
+  {% else %}
+  <p class="muted">Solo un superadmin puede eliminar todos los reportes.</p>
+  {% endif %}
 </section>
 
 <section class="card">

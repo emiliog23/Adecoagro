@@ -431,7 +431,8 @@ def report_status_update(report_id):
 
 @login_required
 def report_delete(report_id):
-    if not admin_required():
+    if not current_user.is_authenticated or not current_user.is_superadmin:
+        flash("Solo un superadmin puede eliminar reportes.", "error")
         return redirect(url_for("reports"))
 
     report = Report.query.get_or_404(report_id)
@@ -443,7 +444,8 @@ def report_delete(report_id):
 
 @login_required
 def report_delete_all():
-    if not admin_required():
+    if not current_user.is_authenticated or not current_user.is_superadmin:
+        flash("Solo un superadmin puede eliminar todos los reportes.", "error")
         return redirect(url_for("reports"))
 
     all_reports = Report.query.all()

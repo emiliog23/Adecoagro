@@ -56,7 +56,7 @@
     </ul>
     <div class="action-row">
       <a class="button-link secondary" href="{{ url_for('report_detail', report_id=report.id) }}">Ver detalle</a>
-      {% if current_user.can_review_reports %}
+      {% if current_user.is_superadmin %}
       <form method="post" action="{{ url_for('report_delete', report_id=report.id) }}">
         <button type="submit" class="danger-button">Eliminar</button>
       </form>

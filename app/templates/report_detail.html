@@ -72,7 +72,7 @@
   {% else %}
   <p class="muted">Aun no hay comentarios registrados.</p>
   {% endif %}
-  {% if current_user.can_review_reports %}
+  {% if current_user.is_superadmin %}
   <form method="post" action="{{ url_for('report_delete', report_id=report.id) }}">
     <button type="submit" class="danger-button">Eliminar reporte</button>
   </form>
