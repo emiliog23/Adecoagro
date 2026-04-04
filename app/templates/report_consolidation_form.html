@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Nueva consolidacion | adecoagro{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h2>Nueva consolidacion</h2>
+    <p class="muted">Selecciona dos o mas reportes para agruparlos en un mismo bloque de seguimiento.</p>
+  </div>
+  <a class="button-link secondary" href="{{ url_for('report_consolidations') }}">Ver consolidaciones</a>
+</section>
+
+<section class="card">
+  <form method="post" action="{{ url_for('report_consolidation_create') }}" class="form-grid">
+    <label>Titulo
+      <input type="text" name="title" required placeholder="Ej: Consolidacion falla recurrente tapadora A2">
+    </label>
+    <label>Descripcion
+      <textarea name="description" rows="4" placeholder="Contexto, criterio de agrupacion o resumen general"></textarea>
+    </label>
+    <fieldset class="report-selector">
+      <legend>Reportes a consolidar</legend>
+      {% if reports %}
+      <div class="report-selector-list">
+        {% for report in reports %}
+        <label class="report-selector-item">
+          <input type="checkbox" name="report_ids" value="{{ report.id }}">
+          <span>#{{ report.id }} · {{ report.title }} · {{ report.machine.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">No hay reportes disponibles para consolidar.</p>
+      {% endif %}
+    </fieldset>
+    <button type="submit" {% if reports|length < 2 %}disabled{% endif %}>Crear consolidacion</button>
+  </form>
+</section>
+{% endblock %}

@@ -19,6 +19,112 @@
   </ul>
 </section>
 
+{% if current_user.is_superadmin %}
+<section class="card">
+  <h3>Editar reporte</h3>
+  <form method="post" action="{{ url_for('report_edit', report_id=report.id) }}" enctype="multipart/form-data" class="form-grid">
+    <label>Titulo
+      <input type="text" name="title" value="{{ report.title }}" required>
+    </label>
+    <label>Categoria
+      <select name="category_id" required>
+        {% for category in categories %}
+        <option value="{{ category.id }}" {% if report.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Maquina
+      <select name="machine_id" id="report-machine-id" required>
+        {% for machine in machines %}
+        <option value="{{ machine.id }}" {% if report.machine_id == machine.id %}selected{% endif %}>{{ machine.line.name }} - {{ machine.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Usuario creador
+      <select name="created_by_id" required>
+        {% for user in users %}
+        <option value="{{ user.id }}" {% if report.created_by_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Fecha de creacion
+      <input type="datetime-local" name="created_at" value="{{ report.created_at.strftime('%Y-%m-%dT%H:%M') }}" required>
+    </label>
+    <label>Estado
+      <select name="status" required>
+        {% for status in statuses %}
+        <option value="{{ status }}" {% if report.status == status %}selected{% endif %}>{{ status }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Descripcion
+      <textarea name="description" rows="6" required>{{ report.description }}</textarea>
+    </label>
+    <label>Acciones tomadas
+      <textarea name="actions_taken" rows="4">{{ report.actions_taken or '' }}</textarea>
+    </label>
+    <label>Repuestos usados
+      <textarea name="spare_parts_used" rows="4">{{ report.spare_parts_used or '' }}</textarea>
+    </label>
+    <label>Tiempo aproximado de parada (minutos)
+      <input type="number" name="downtime_minutes" min="0" step="1" value="{{ report.downtime_minutes if report.downtime_minutes is not none else '' }}">
+    </label>
+    <label>Parametros vinculados
+      <select name="parameter_ids" id="report-parameter-ids" multiple size="8">
+        {% for parameter in parameters %}
+        <option value="{{ parameter.id }}" data-machine-id="{{ parameter.machine_id }}" {% if parameter in report.parameters %}selected{% endif %}>
+          {{ parameter.machine.name }} · {{ parameter.parameter_type }} · {{ parameter.name }} ({{ parameter.unit }})
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Nuevas imagenes
+      <input type="file" name="images" accept=".png,.jpg,.jpeg,.gif,.webp" multiple>
+    </label>
+    <button type="submit">Guardar reporte</button>
+  </form>
+</section>
+{% endif %}
+
+<section class="card">
+  <h3>Parametros vinculados</h3>
+  {% if report.parameters %}
+  <div class="section-actions">
+    <a class="button-link secondary compact-action" href="{{ url_for('parameter_report_machine', machine_id=report.machine.id, report_id=report.id) }}">Ver solo estos parametros</a>
+  </div>
+  <div class="chip-row">
+    {% for parameter in report.parameters|sort(attribute='name') %}
+    <a class="info-chip" href="{{ url_for('parameter_report_machine', machine_id=report.machine.id, report_id=report.id) }}">{{ parameter.parameter_type }} · {{ parameter.name }} ({{ parameter.unit }})</a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">Este reporte no tiene parametros asociados.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h3>Consolidaciones</h3>
+  {% if report.consolidations %}
+  <div class="stack-list">
+    {% for consolidation in report.consolidations|sort(attribute='created_at', reverse=True) %}
+    <article class="nested-card">
+      <div class="report-card-top">
+        <strong>{{ consolidation.title }}</strong>
+        <span class="muted">{{ consolidation.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+      </div>
+      <p class="muted">Creada por {{ consolidation.created_by.full_name }} · {{ consolidation.reports|length }} reportes</p>
+      {% if consolidation.description %}
+      <p>{{ consolidation.description }}</p>
+      {% endif %}
+      <a class="button-link secondary" href="{{ url_for('report_consolidation_detail', consolidation_id=consolidation.id) }}">Ver consolidacion</a>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">Este reporte aun no forma parte de una consolidacion.</p>
+  {% endif %}
+</section>
+
 {% if report.actions_taken or report.spare_parts_used %}
 <section class="card">
   <h3>Detalle operativo</h3>
@@ -34,9 +140,16 @@
   <h3>Imagenes adjuntas</h3>
   <div class="image-grid">
     {% for attachment in report.attachments %}
-    <a href="{{ url_for('uploaded_file', filename=attachment.filename) }}" target="_blank" rel="noreferrer">
-      <img src="{{ url_for('uploaded_file', filename=attachment.filename) }}" alt="{{ attachment.original_name }}">
-    </a>
+    <div class="image-card">
+      <a href="{{ url_for('uploaded_file', filename=attachment.filename) }}" target="_blank" rel="noreferrer">
+        <img src="{{ url_for('uploaded_file', filename=attachment.filename) }}" alt="{{ attachment.original_name }}">
+      </a>
+      {% if current_user.is_superadmin %}
+      <form method="post" action="{{ url_for('report_attachment_delete', attachment_id=attachment.id) }}">
+        <button type="submit" class="danger-button compact-danger">Eliminar imagen</button>
+      </form>
+      {% endif %}
+    </div>
     {% endfor %}
   </div>
 </section>
@@ -67,7 +180,29 @@
   <div class="comment-list">
     {% for comment in report.comments|sort(attribute='created_at', reverse=True) %}
     <article class="comment-card">
+      {% if current_user.is_superadmin %}
+      <form method="post" action="{{ url_for('report_comment_edit', comment_id=comment.id) }}" class="form-grid">
+        <label>Comentario
+          <textarea name="content" rows="3" required>{{ comment.content }}</textarea>
+        </label>
+        <label>Usuario
+          <select name="created_by_id" required>
+            {% for user in users %}
+            <option value="{{ user.id }}" {% if comment.created_by_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Fecha
+          <input type="datetime-local" name="created_at" value="{{ comment.created_at.strftime('%Y-%m-%dT%H:%M') }}" required>
+        </label>
+        <button type="submit">Guardar comentario</button>
+      </form>
+      <form method="post" action="{{ url_for('report_comment_delete', comment_id=comment.id) }}" class="comment-delete-form">
+        <button type="submit" class="danger-button">Eliminar comentario</button>
+      </form>
+      {% else %}
       <p>{{ comment.content }}</p>
+      {% endif %}
       <p class="muted">{{ comment.created_by.full_name }} · {{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
     </article>
     {% endfor %}
@@ -81,4 +216,25 @@
   </form>
   {% endif %}
 </section>
+<script>
+  const reportMachineSelect = document.getElementById("report-machine-id");
+  const reportParameterSelect = document.getElementById("report-parameter-ids");
+
+  if (reportMachineSelect && reportParameterSelect) {
+    function syncReportParameterOptions() {
+      const machineId = reportMachineSelect.value;
+      for (const option of reportParameterSelect.options) {
+        const visible = !machineId || option.dataset.machineId === machineId;
+        option.hidden = !visible;
+        option.disabled = !visible;
+        if (!visible) {
+          option.selected = false;
+        }
+      }
+    }
+
+    reportMachineSelect.addEventListener("change", syncReportParameterOptions);
+    syncReportParameterOptions();
+  }
+</script>
 {% endblock %}

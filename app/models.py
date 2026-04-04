@@ -36,6 +36,12 @@ class User(UserMixin, db.Model):
 
     reports = db.relationship("Report", back_populates="created_by", lazy=True)
     comments = db.relationship("ReportComment", back_populates="created_by", lazy=True)
+    consolidations_created = db.relationship(
+        "ReportConsolidation",
+        back_populates="created_by",
+        cascade="all, delete-orphan",
+        lazy=True,
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method="pbkdf2:sha256")
@@ -100,6 +106,20 @@ class Category(db.Model):
     reports = db.relationship("Report", back_populates="category", lazy=True)
 
 
+report_parameter_links = db.Table(
+    "report_parameter_link",
+    db.Column("report_id", db.Integer, db.ForeignKey("report.id"), primary_key=True),
+    db.Column("parameter_id", db.Integer, db.ForeignKey("machine_parameter.id"), primary_key=True),
+)
+
+
+report_consolidation_links = db.Table(
+    "report_consolidation_link",
+    db.Column("consolidation_id", db.Integer, db.ForeignKey("report_consolidation.id"), primary_key=True),
+    db.Column("report_id", db.Integer, db.ForeignKey("report.id"), primary_key=True),
+)
+
+
 class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
@@ -120,6 +140,34 @@ class Report(db.Model):
     created_by = db.relationship("User", back_populates="reports")
     attachments = db.relationship("Attachment", back_populates="report", cascade="all, delete-orphan", lazy=True)
     comments = db.relationship("ReportComment", back_populates="report", cascade="all, delete-orphan", lazy=True)
+    parameters = db.relationship(
+        "MachineParameter",
+        secondary=report_parameter_links,
+        back_populates="reports",
+        lazy=True,
+    )
+    consolidations = db.relationship(
+        "ReportConsolidation",
+        secondary=report_consolidation_links,
+        back_populates="reports",
+        lazy=True,
+    )
+
+
+class ReportConsolidation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    created_by = db.relationship("User", back_populates="consolidations_created")
+    reports = db.relationship(
+        "Report",
+        secondary=report_consolidation_links,
+        back_populates="consolidations",
+        lazy=True,
+    )
 
 
 class Attachment(db.Model):
@@ -158,6 +206,12 @@ class MachineParameter(db.Model):
         cascade="all, delete-orphan",
         lazy=True,
         order_by="MachineParameterReading.changed_at.desc()",
+    )
+    reports = db.relationship(
+        "Report",
+        secondary=report_parameter_links,
+        back_populates="parameters",
+        lazy=True,
     )
 
 

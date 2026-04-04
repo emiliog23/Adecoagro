@@ -26,6 +26,11 @@
     <div class="admin-item">
       <form method="post" action="{{ url_for('edit_line', line_id=line.id) }}" class="inline-edit">
         <input type="text" name="name" value="{{ line.name }}" required>
+        <select name="factory_id">
+          {% for factory in factories %}
+          <option value="{{ factory.id }}" {% if line.factory_id == factory.id %}selected{% endif %}>{{ factory.name }}</option>
+          {% endfor %}
+        </select>
         <label class="checkbox"><input type="checkbox" name="active" {% if line.active %}checked{% endif %}> Activa</label>
         <button type="submit">Guardar</button>
       </form>

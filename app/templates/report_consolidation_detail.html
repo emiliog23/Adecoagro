@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Consolidacion #{{ consolidation.id }} | adecoagro{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">Consolidacion #{{ consolidation.id }}</p>
+      <h2>{{ consolidation.title }}</h2>
+      <p class="muted">{{ consolidation.created_at.strftime('%d/%m/%Y %H:%M') }} por {{ consolidation.created_by.full_name }}</p>
+    </div>
+    <span class="status-badge large">{{ visible_reports|length }} reportes</span>
+  </div>
+  {% if consolidation.description %}
+  <p>{{ consolidation.description }}</p>
+  {% else %}
+  <p class="muted">Sin descripcion adicional.</p>
+  {% endif %}
+</section>
+
+{% if current_user.is_superadmin %}
+<section class="card">
+  <h3>Editar consolidacion</h3>
+  <form method="post" action="{{ url_for('report_consolidation_edit', consolidation_id=consolidation.id) }}" class="form-grid">
+    <label>Titulo
+      <input type="text" name="title" value="{{ consolidation.title }}" required>
+    </label>
+    <label>Descripcion
+      <textarea name="description" rows="4">{{ consolidation.description or '' }}</textarea>
+    </label>
+    <label>Usuario creador
+      <select name="created_by_id" required>
+        {% for user in users %}
+        <option value="{{ user.id }}" {% if consolidation.created_by_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Fecha de creacion
+      <input type="datetime-local" name="created_at" value="{{ consolidation.created_at.strftime('%Y-%m-%dT%H:%M') }}" required>
+    </label>
+    <fieldset class="report-selector">
+      <legend>Reportes incluidos</legend>
+      <div class="report-selector-list">
+        {% for report in reports %}
+        <label class="report-selector-item">
+          <input type="checkbox" name="report_ids" value="{{ report.id }}" {% if report in consolidation.reports %}checked{% endif %}>
+          <span>#{{ report.id }} · {{ report.title }} · {{ report.machine.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <button type="submit">Guardar consolidacion</button>
+  </form>
+  <form method="post" action="{{ url_for('report_consolidation_delete', consolidation_id=consolidation.id) }}">
+    <button type="submit" class="danger-button">Eliminar consolidacion</button>
+  </form>
+</section>
+{% endif %}
+
+<section class="report-grid">
+  {% for report in visible_reports %}
+  <article class="card report-card">
+    <div class="report-card-top">
+      <span class="status-badge">{{ report.status }}</span>
+      <span class="muted">#{{ report.id }}</span>
+    </div>
+    <h3>{{ report.title }}</h3>
+    <p>{{ report.description[:160] }}{% if report.description|length > 160 %}...{% endif %}</p>
+    <ul class="meta-list">
+      <li><strong>Categoria:</strong> {{ report.category.name }}</li>
+      <li><strong>Maquina:</strong> {{ report.machine.name }}</li>
+      <li><strong>Usuario:</strong> {{ report.created_by.full_name }}</li>
+    </ul>
+    {% if report.parameters %}
+    <div class="chip-row">
+      {% for parameter in report.parameters|sort(attribute='name') %}
+      <span class="info-chip">{{ parameter.name }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="action-row">
+      <a class="button-link secondary" href="{{ url_for('report_detail', report_id=report.id) }}">Ver detalle</a>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

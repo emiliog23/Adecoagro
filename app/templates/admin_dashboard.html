@@ -16,6 +16,9 @@
 </section>
 
 <section class="admin-links">
+  {% if current_user.is_superadmin %}
+  <a class="button-link" href="{{ url_for('manage_factories') }}">Gestionar fabricas</a>
+  {% endif %}
   <a class="button-link" href="{{ url_for('manage_lines') }}">Gestionar lineas</a>
   <a class="button-link" href="{{ url_for('manage_machines') }}">Gestionar maquinas</a>
   <a class="button-link" href="{{ url_for('manage_categories') }}">Gestionar categorias</a>
