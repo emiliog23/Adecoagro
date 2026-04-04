@@ -90,7 +90,6 @@
   <h3>Parametros vinculados</h3>
   {% if report.parameters %}
   <div class="section-actions">
-    <a class="button-link secondary compact-action" href="{{ url_for('parameter_report_machine', machine_id=report.machine.id, report_id=report.id) }}">Ver solo estos parametros</a>
   </div>
   <div class="chip-row">
     {% for parameter in report.parameters|sort(attribute='name') %}
