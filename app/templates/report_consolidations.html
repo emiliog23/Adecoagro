@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Consolidaciones | adecoagro{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h2>Consolidaciones</h2>
+    <p class="muted">Agrupa dos o mas reportes para tratarlos como un mismo bloque de seguimiento.</p>
+  </div>
+  <a class="button-link" href="{{ url_for('report_consolidation_new') }}">Nueva consolidacion</a>
+</section>
+
+<section class="card">
+  <h3>Consolidaciones existentes</h3>
+  {% if consolidations %}
+  <div class="stack-list">
+    {% for consolidation in consolidations %}
+    <article class="nested-card">
+      <div class="report-card-top">
+        <strong>{{ consolidation.title }}</strong>
+        <span class="muted">{{ consolidation.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+      </div>
+      <p class="muted">Creada por {{ consolidation.created_by.full_name }} · {{ consolidation.reports|length }} reportes</p>
+      {% if consolidation.description %}
+      <p>{{ consolidation.description }}</p>
+      {% endif %}
+      <a class="button-link secondary" href="{{ url_for('report_consolidation_detail', consolidation_id=consolidation.id) }}">Ver consolidacion</a>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">Todavia no hay consolidaciones creadas.</p>
+  {% endif %}
+</section>
+{% endblock %}

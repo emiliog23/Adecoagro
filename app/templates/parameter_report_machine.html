@@ -11,7 +11,19 @@
 </section>
 
 <section class="card">
+  {% if source_report %}
+  <div class="page-head compact-head">
+    <div>
+      <h3>Parametros vinculados al reporte #{{ source_report.id }}</h3>
+      <p class="muted">{{ source_report.title }}</p>
+    </div>
+    <a class="button-link secondary compact-action" href="{{ url_for('parameter_report_machine', machine_id=machine.id) }}">Ver todos los parametros</a>
+  </div>
+  {% endif %}
   <form method="get" class="sheet-filters">
+    {% if source_report %}
+    <input type="hidden" name="report_id" value="{{ source_report.id }}">
+    {% endif %}
     <label>Receta
       <select name="recipe">
         <option value="">Todas</option>
@@ -32,10 +44,23 @@
           <span>{{ card.parameter.unit }}</span>
         </div>
         {% if current_user.is_superadmin %}
-        <form method="post" action="{{ url_for('parameter_delete', parameter_id=card.parameter.id) }}" class="sheet-delete-form">
-          <input type="hidden" name="recipe_filter" value="{{ recipe_filter }}">
-          <button type="submit" class="danger-button compact-danger">Eliminar parametro</button>
-        </form>
+        <div class="sheet-admin-actions">
+          <form method="post" action="{{ url_for('parameter_edit', parameter_id=card.parameter.id) }}" class="sheet-inline-edit">
+            <input type="hidden" name="recipe_filter" value="{{ recipe_filter }}">
+            <input type="text" name="name" value="{{ card.parameter.name }}" required>
+            <select name="parameter_type">
+              {% for parameter_type in parameter_types %}
+              <option value="{{ parameter_type }}" {% if card.parameter.parameter_type == parameter_type %}selected{% endif %}>{{ parameter_type }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="unit" value="{{ card.parameter.unit }}" required>
+            <button type="submit" class="button-link secondary compact-action">Guardar parametro</button>
+          </form>
+          <form method="post" action="{{ url_for('parameter_delete', parameter_id=card.parameter.id) }}" class="sheet-delete-form">
+            <input type="hidden" name="recipe_filter" value="{{ recipe_filter }}">
+            <button type="submit" class="danger-button compact-danger">Eliminar parametro</button>
+          </form>
+        </div>
         {% endif %}
       </div>
       <div class="table-wrap">
@@ -47,16 +72,45 @@
               <th>Valor</th>
               <th>Unidad</th>
               <th>Usuario</th>
+              {% if current_user.is_superadmin %}
+              <th>Acciones</th>
+              {% endif %}
             </tr>
           </thead>
           <tbody>
             {% for reading in card.readings %}
             <tr>
+              {% if current_user.is_superadmin %}
+              <td>
+                <form method="post" action="{{ url_for('parameter_reading_edit', reading_id=reading.id) }}" class="reading-inline-form" id="reading-form-{{ reading.id }}">
+                  <input type="hidden" name="recipe_filter" value="{{ recipe_filter }}">
+                </form>
+                <input form="reading-form-{{ reading.id }}" type="datetime-local" name="changed_at" value="{{ reading.changed_at.strftime('%Y-%m-%dT%H:%M') }}" required>
+              </td>
+              <td>
+                <input form="reading-form-{{ reading.id }}" type="text" name="current_recipe" value="{{ reading.current_recipe }}" required>
+              </td>
+              <td class="numeric-cell">
+                <input form="reading-form-{{ reading.id }}" type="number" name="value" step="0.01" value="{{ '%.2f'|format(reading.value) }}" required>
+              </td>
+              <td>{{ card.parameter.unit }}</td>
+              <td>{{ reading.created_by.full_name }}</td>
+              <td>
+                <div class="table-action-row">
+                  <button form="reading-form-{{ reading.id }}" type="submit" class="button-link secondary compact-action">Guardar</button>
+                  <form method="post" action="{{ url_for('parameter_reading_delete', reading_id=reading.id) }}">
+                    <input type="hidden" name="recipe_filter" value="{{ recipe_filter }}">
+                    <button type="submit" class="danger-button compact-danger">Eliminar</button>
+                  </form>
+                </div>
+              </td>
+              {% else %}
               <td>{{ reading.changed_at.strftime('%d/%m/%Y %H:%M') }}</td>
               <td>{{ reading.current_recipe }}</td>
               <td class="numeric-cell">{{ "%.2f"|format(reading.value) }}</td>
               <td>{{ card.parameter.unit }}</td>
               <td>{{ reading.created_by.full_name }}</td>
+              {% endif %}
             </tr>
             {% endfor %}
           </tbody>
@@ -92,7 +146,7 @@
       </div>
     </section>
     {% else %}
-    <p class="muted">No hay parametros para la receta seleccionada.</p>
+    <p class="muted">{% if source_report %}Este reporte no tiene parametros con los filtros actuales.{% else %}No hay parametros para la receta seleccionada.{% endif %}</p>
     {% endfor %}
   </div>
 </section>

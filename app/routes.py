@@ -19,9 +19,12 @@ from .models import (
     ProductionLine,
     REPORT_STATUSES,
     Report,
+    ReportConsolidation,
     ReportComment,
     USER_ROLES,
     User,
+    report_consolidation_links,
+    report_parameter_links,
 )
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
@@ -45,15 +48,43 @@ def reviewer_required():
     return True
 
 
+def superadmin_required():
+    if not current_user.is_authenticated or not current_user.is_superadmin:
+        flash("Solo un superadmin puede realizar esa accion.", "error")
+        return False
+    return True
+
+
 def delete_report_record(report):
+    db.session.execute(
+        report_parameter_links.delete().where(report_parameter_links.c.report_id == report.id)
+    )
+    db.session.execute(
+        report_consolidation_links.delete().where(report_consolidation_links.c.report_id == report.id)
+    )
     delete_report_files(report)
     db.session.delete(report)
+
+
+def build_accessible_reports_query():
+    query = Report.query.order_by(Report.created_at.desc())
+    if not current_user.can_review_reports:
+        query = query.filter_by(created_by_id=current_user.id)
+    return query
+
+
+def build_parameter_choices():
+    parameters = MachineParameter.query.join(Machine).order_by(Machine.name, MachineParameter.parameter_type, MachineParameter.name).all()
+    return parameters
 
 
 def purge_machine(machine):
     for report in list(machine.reports):
         delete_report_record(report)
     for parameter in list(machine.parameter_definitions):
+        db.session.execute(
+            report_parameter_links.delete().where(report_parameter_links.c.parameter_id == parameter.id)
+        )
         db.session.delete(parameter)
     db.session.delete(machine)
 
@@ -65,6 +96,8 @@ def purge_user(user):
         db.session.delete(reading)
     for report in list(user.reports):
         delete_report_record(report)
+    for consolidation in list(user.consolidations_created):
+        db.session.delete(consolidation)
     db.session.delete(user)
 
 
@@ -77,6 +110,29 @@ def delete_attachment_file(filename):
 def delete_report_files(report):
     for attachment in report.attachments:
         delete_attachment_file(attachment.filename)
+
+
+def attach_uploaded_files(report, files):
+    for file in files:
+        if not file or not file.filename:
+            continue
+        if not allowed_file(file.filename):
+            flash(f"Archivo no permitido: {file.filename}", "error")
+            continue
+
+        original_name = secure_filename(file.filename)
+        extension = original_name.rsplit(".", 1)[1].lower()
+        saved_name = f"{uuid4().hex}.{extension}"
+        save_path = Path(current_app.config["UPLOAD_FOLDER"]) / saved_name
+        file.save(save_path)
+
+        db.session.add(
+            Attachment(
+                filename=saved_name,
+                original_name=original_name,
+                report_id=report.id,
+            )
+        )
 
 
 def build_parameter_stats(parameter, recipe_filter=""):
@@ -155,7 +211,7 @@ def reports():
     category_filter = request.args.get("category_id", type=int)
     user_filter = request.args.get("user_id", type=int)
 
-    query = Report.query.order_by(Report.created_at.desc())
+    query = build_accessible_reports_query()
     if status_filter:
         query = query.filter_by(status=status_filter)
     if line_filter:
@@ -301,8 +357,24 @@ def parameter_report_create():
 def parameter_report_machine(machine_id):
     machine = Machine.query.get_or_404(machine_id)
     recipe_filter = request.args.get("recipe", "").strip()
+    report_id = request.args.get("report_id", type=int)
+    source_report = None
+    selected_parameter_ids = None
+
+    if report_id:
+        source_report = Report.query.get_or_404(report_id)
+        if not current_user.can_review_reports and source_report.created_by_id != current_user.id:
+            flash("No tienes acceso a ese reporte.", "error")
+            return redirect(url_for("reports"))
+        if source_report.machine_id != machine.id:
+            flash("Ese reporte no pertenece a la maquina consultada.", "error")
+            return redirect(url_for("parameter_report_machine", machine_id=machine.id))
+        selected_parameter_ids = {parameter.id for parameter in source_report.parameters}
+
     parameter_cards = [build_parameter_stats(parameter, recipe_filter) for parameter in machine.parameter_definitions]
     parameter_cards = [card for card in parameter_cards if card]
+    if selected_parameter_ids is not None:
+        parameter_cards = [card for card in parameter_cards if card["parameter"].id in selected_parameter_ids]
     available_recipes = sorted(
         {
             reading.current_recipe
@@ -316,22 +388,124 @@ def parameter_report_machine(machine_id):
         machine=machine,
         parameter_cards=parameter_cards,
         available_recipes=available_recipes,
+        parameter_types=PARAMETER_REPORT_TYPES,
         recipe_filter=recipe_filter,
+        source_report=source_report,
+    )
+
+
+@login_required
+def report_consolidations():
+    accessible_reports = build_accessible_reports_query().all()
+    accessible_report_ids = {report.id for report in accessible_reports}
+    consolidations = [
+        consolidation
+        for consolidation in ReportConsolidation.query.order_by(ReportConsolidation.created_at.desc()).all()
+        if any(report.id in accessible_report_ids for report in consolidation.reports)
+    ]
+
+    return render_template(
+        "report_consolidations.html",
+        consolidations=consolidations,
+    )
+
+
+@login_required
+def report_consolidation_new():
+    return render_template(
+        "report_consolidation_form.html",
+        reports=build_accessible_reports_query().all(),
     )
 
 
 @login_required
 def parameter_delete(parameter_id):
-    if not current_user.is_superadmin:
-        flash("Solo un superadmin puede eliminar parametros.", "error")
+    if not superadmin_required():
         return redirect(url_for("parameter_reports"))
 
     parameter = MachineParameter.query.get_or_404(parameter_id)
     machine_id = parameter.machine_id
     recipe_filter = request.form.get("recipe_filter", "").strip()
+    db.session.execute(
+        report_parameter_links.delete().where(report_parameter_links.c.parameter_id == parameter.id)
+    )
     db.session.delete(parameter)
     db.session.commit()
     flash("Parametro eliminado junto con todo su historial.", "success")
+
+    if recipe_filter:
+        return redirect(url_for("parameter_report_machine", machine_id=machine_id, recipe=recipe_filter))
+    return redirect(url_for("parameter_report_machine", machine_id=machine_id))
+
+
+@login_required
+def parameter_edit(parameter_id):
+    if not superadmin_required():
+        return redirect(url_for("parameter_reports"))
+
+    parameter = MachineParameter.query.get_or_404(parameter_id)
+    machine_id = parameter.machine_id
+    recipe_filter = request.form.get("recipe_filter", "").strip()
+    name = request.form.get("name", "").strip()
+    parameter_type = request.form.get("parameter_type", "").strip()
+    unit = request.form.get("unit", "").strip()
+
+    if not name or parameter_type not in PARAMETER_REPORT_TYPES or not unit:
+        flash("Completa nombre, tipo y unidad del parametro.", "error")
+    else:
+        parameter.name = name
+        parameter.parameter_type = parameter_type
+        parameter.unit = unit
+        db.session.commit()
+        flash("Parametro actualizado.", "success")
+
+    if recipe_filter:
+        return redirect(url_for("parameter_report_machine", machine_id=machine_id, recipe=recipe_filter))
+    return redirect(url_for("parameter_report_machine", machine_id=machine_id))
+
+
+@login_required
+def parameter_reading_edit(reading_id):
+    if not superadmin_required():
+        return redirect(url_for("parameter_reports"))
+
+    reading = MachineParameterReading.query.get_or_404(reading_id)
+    machine_id = reading.parameter.machine_id
+    recipe_filter = request.form.get("recipe_filter", "").strip()
+    current_recipe = request.form.get("current_recipe", "").strip()
+    value = request.form.get("value", type=float)
+    changed_at_raw = request.form.get("changed_at", "").strip()
+
+    if not current_recipe or value is None or not changed_at_raw:
+        flash("Completa receta, valor y fecha de cambio.", "error")
+    else:
+        try:
+            changed_at = datetime.fromisoformat(changed_at_raw)
+        except ValueError:
+            flash("La fecha del cambio no es valida.", "error")
+        else:
+            reading.current_recipe = current_recipe
+            reading.value = value
+            reading.changed_at = changed_at
+            db.session.commit()
+            flash("Entrada de parametro actualizada.", "success")
+
+    if recipe_filter:
+        return redirect(url_for("parameter_report_machine", machine_id=machine_id, recipe=recipe_filter))
+    return redirect(url_for("parameter_report_machine", machine_id=machine_id))
+
+
+@login_required
+def parameter_reading_delete(reading_id):
+    if not superadmin_required():
+        return redirect(url_for("parameter_reports"))
+
+    reading = MachineParameterReading.query.get_or_404(reading_id)
+    machine_id = reading.parameter.machine_id
+    recipe_filter = request.form.get("recipe_filter", "").strip()
+    db.session.delete(reading)
+    db.session.commit()
+    flash("Entrada de parametro eliminada.", "success")
 
     if recipe_filter:
         return redirect(url_for("parameter_report_machine", machine_id=machine_id, recipe=recipe_filter))
@@ -343,6 +517,7 @@ def report_create():
     lines = ProductionLine.query.filter_by(active=True).order_by(ProductionLine.name).all()
     machines = Machine.query.filter_by(active=True).order_by(Machine.name).all()
     categories = Category.query.filter_by(active=True).order_by(Category.name).all()
+    parameters = build_parameter_choices()
 
     if request.method == "POST":
         title = request.form.get("title", "").strip()
@@ -352,10 +527,40 @@ def report_create():
         downtime_minutes = request.form.get("downtime_minutes", type=int)
         category_id = request.form.get("category_id", type=int)
         machine_id = request.form.get("machine_id", type=int)
+        parameter_ids = {parameter_id for parameter_id in request.form.getlist("parameter_ids") if parameter_id}
 
         if not title or not description or not category_id or not machine_id:
             flash("Completa titulo, descripcion, categoria y maquina.", "error")
-            return render_template("report_form.html", lines=lines, machines=machines, categories=categories)
+            return render_template(
+                "report_form.html",
+                lines=lines,
+                machines=machines,
+                categories=categories,
+                parameters=parameters,
+            )
+
+        selected_parameters = []
+        if parameter_ids:
+            selected_parameters = MachineParameter.query.filter(MachineParameter.id.in_(parameter_ids)).all()
+            selected_parameter_ids = {str(parameter.id) for parameter in selected_parameters}
+            if selected_parameter_ids != parameter_ids:
+                flash("Se seleccionaron parametros invalidos.", "error")
+                return render_template(
+                    "report_form.html",
+                    lines=lines,
+                    machines=machines,
+                    categories=categories,
+                    parameters=parameters,
+                )
+            if any(parameter.machine_id != machine_id for parameter in selected_parameters):
+                flash("Solo puedes vincular parametros de la maquina seleccionada.", "error")
+                return render_template(
+                    "report_form.html",
+                    lines=lines,
+                    machines=machines,
+                    categories=categories,
+                    parameters=parameters,
+                )
 
         report = Report(
             title=title,
@@ -369,33 +574,21 @@ def report_create():
         )
         db.session.add(report)
         db.session.flush()
+        report.parameters = selected_parameters
 
-        for file in request.files.getlist("images"):
-            if not file or not file.filename:
-                continue
-            if not allowed_file(file.filename):
-                flash(f"Archivo no permitido: {file.filename}", "error")
-                continue
-
-            original_name = secure_filename(file.filename)
-            extension = original_name.rsplit(".", 1)[1].lower()
-            saved_name = f"{uuid4().hex}.{extension}"
-            save_path = Path(current_app.config["UPLOAD_FOLDER"]) / saved_name
-            file.save(save_path)
-
-            db.session.add(
-                Attachment(
-                    filename=saved_name,
-                    original_name=original_name,
-                    report_id=report.id,
-                )
-            )
+        attach_uploaded_files(report, request.files.getlist("images"))
 
         db.session.commit()
         flash("Reporte creado correctamente.", "success")
         return redirect(url_for("report_detail", report_id=report.id))
 
-    return render_template("report_form.html", lines=lines, machines=machines, categories=categories)
+    return render_template(
+        "report_form.html",
+        lines=lines,
+        machines=machines,
+        categories=categories,
+        parameters=parameters,
+    )
 
 
 @login_required
@@ -415,7 +608,219 @@ def report_detail(report_id):
         else:
             flash("Escribe un comentario para guardarlo.", "error")
 
-    return render_template("report_detail.html", report=report, statuses=REPORT_STATUSES)
+    return render_template(
+        "report_detail.html",
+        report=report,
+        statuses=REPORT_STATUSES,
+        users=User.query.order_by(User.full_name).all(),
+        categories=Category.query.order_by(Category.name).all(),
+        machines=Machine.query.order_by(Machine.name).all(),
+        parameters=build_parameter_choices(),
+    )
+
+
+@login_required
+def report_edit(report_id):
+    if not superadmin_required():
+        return redirect(url_for("reports"))
+
+    report = Report.query.get_or_404(report_id)
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    actions_taken = request.form.get("actions_taken", "").strip()
+    spare_parts_used = request.form.get("spare_parts_used", "").strip()
+    downtime_minutes = request.form.get("downtime_minutes", type=int)
+    category_id = request.form.get("category_id", type=int)
+    machine_id = request.form.get("machine_id", type=int)
+    created_by_id = request.form.get("created_by_id", type=int)
+    status = request.form.get("status", "").strip()
+    created_at_raw = request.form.get("created_at", "").strip()
+    parameter_ids = {parameter_id for parameter_id in request.form.getlist("parameter_ids") if parameter_id}
+
+    if not title or not description or not category_id or not machine_id or not created_by_id or status not in REPORT_STATUSES or not created_at_raw:
+        flash("Completa todos los campos obligatorios del reporte.", "error")
+        return redirect(url_for("report_detail", report_id=report.id))
+
+    try:
+        created_at = datetime.fromisoformat(created_at_raw)
+    except ValueError:
+        flash("La fecha de creacion del reporte no es valida.", "error")
+        return redirect(url_for("report_detail", report_id=report.id))
+
+    selected_parameters = MachineParameter.query.filter(MachineParameter.id.in_(parameter_ids)).all() if parameter_ids else []
+    if any(parameter.machine_id != machine_id for parameter in selected_parameters):
+        flash("Solo puedes vincular parametros de la maquina seleccionada.", "error")
+        return redirect(url_for("report_detail", report_id=report.id))
+
+    report.title = title
+    report.description = description
+    report.actions_taken = actions_taken or None
+    report.spare_parts_used = spare_parts_used or None
+    report.downtime_minutes = downtime_minutes
+    report.category_id = category_id
+    report.machine_id = machine_id
+    report.created_by_id = created_by_id
+    report.status = status
+    report.created_at = created_at
+    report.parameters = selected_parameters
+    attach_uploaded_files(report, request.files.getlist("images"))
+    db.session.commit()
+    flash("Reporte actualizado.", "success")
+    return redirect(url_for("report_detail", report_id=report.id))
+
+
+@login_required
+def report_attachment_delete(attachment_id):
+    if not superadmin_required():
+        return redirect(url_for("reports"))
+
+    attachment = Attachment.query.get_or_404(attachment_id)
+    report_id = attachment.report_id
+    delete_attachment_file(attachment.filename)
+    db.session.delete(attachment)
+    db.session.commit()
+    flash("Adjunto eliminado.", "success")
+    return redirect(url_for("report_detail", report_id=report_id))
+
+
+@login_required
+def report_comment_edit(comment_id):
+    if not superadmin_required():
+        return redirect(url_for("reports"))
+
+    comment = ReportComment.query.get_or_404(comment_id)
+    report_id = comment.report_id
+    content = request.form.get("content", "").strip()
+    created_by_id = request.form.get("created_by_id", type=int)
+    created_at_raw = request.form.get("created_at", "").strip()
+    if not content or not created_by_id or not created_at_raw:
+        flash("Completa comentario, usuario y fecha.", "error")
+    else:
+        try:
+            created_at = datetime.fromisoformat(created_at_raw)
+        except ValueError:
+            flash("La fecha del comentario no es valida.", "error")
+            return redirect(url_for("report_detail", report_id=report_id))
+        comment.content = content
+        comment.created_by_id = created_by_id
+        comment.created_at = created_at
+        db.session.commit()
+        flash("Comentario actualizado.", "success")
+    return redirect(url_for("report_detail", report_id=report_id))
+
+
+@login_required
+def report_comment_delete(comment_id):
+    if not superadmin_required():
+        return redirect(url_for("reports"))
+
+    comment = ReportComment.query.get_or_404(comment_id)
+    report_id = comment.report_id
+    db.session.delete(comment)
+    db.session.commit()
+    flash("Comentario eliminado.", "success")
+    return redirect(url_for("report_detail", report_id=report_id))
+
+
+@login_required
+def report_consolidation_create():
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    report_ids = {report_id for report_id in request.form.getlist("report_ids") if report_id}
+
+    if not title:
+        flash("Completa el titulo de la consolidacion.", "error")
+        return redirect(url_for("report_consolidation_new"))
+
+    if len(report_ids) < 2:
+        flash("Selecciona al menos dos reportes para consolidar.", "error")
+        return redirect(url_for("report_consolidation_new"))
+
+    accessible_reports = build_accessible_reports_query().all()
+    accessible_report_map = {str(report.id): report for report in accessible_reports}
+    if any(report_id not in accessible_report_map for report_id in report_ids):
+        flash("Hay reportes seleccionados a los que no tienes acceso.", "error")
+        return redirect(url_for("report_consolidation_new"))
+
+    consolidation = ReportConsolidation(
+        title=title,
+        description=description or None,
+        created_by_id=current_user.id,
+    )
+    consolidation.reports = [accessible_report_map[report_id] for report_id in sorted(report_ids, key=int)]
+    db.session.add(consolidation)
+    db.session.commit()
+    flash("Consolidacion creada correctamente.", "success")
+    return redirect(url_for("report_consolidation_detail", consolidation_id=consolidation.id))
+
+
+@login_required
+def report_consolidation_detail(consolidation_id):
+    consolidation = ReportConsolidation.query.get_or_404(consolidation_id)
+    accessible_report_ids = {report.id for report in build_accessible_reports_query().all()}
+    visible_reports = [report for report in consolidation.reports if report.id in accessible_report_ids]
+
+    if not visible_reports:
+        flash("No tienes acceso a esta consolidacion.", "error")
+        return redirect(url_for("reports"))
+
+    return render_template(
+        "report_consolidation_detail.html",
+        consolidation=consolidation,
+        visible_reports=sorted(visible_reports, key=lambda report: report.created_at, reverse=True),
+        users=User.query.order_by(User.full_name).all(),
+        reports=build_accessible_reports_query().all(),
+    )
+
+
+@login_required
+def report_consolidation_edit(consolidation_id):
+    if not superadmin_required():
+        return redirect(url_for("report_consolidations"))
+
+    consolidation = ReportConsolidation.query.get_or_404(consolidation_id)
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    created_by_id = request.form.get("created_by_id", type=int)
+    created_at_raw = request.form.get("created_at", "").strip()
+    report_ids = {report_id for report_id in request.form.getlist("report_ids") if report_id}
+
+    if not title or not created_by_id or not created_at_raw or len(report_ids) < 2:
+        flash("Completa titulo, creador, fecha y al menos dos reportes.", "error")
+        return redirect(url_for("report_consolidation_detail", consolidation_id=consolidation.id))
+
+    try:
+        created_at = datetime.fromisoformat(created_at_raw)
+    except ValueError:
+        flash("La fecha de la consolidacion no es valida.", "error")
+        return redirect(url_for("report_consolidation_detail", consolidation_id=consolidation.id))
+
+    accessible_reports = build_accessible_reports_query().all()
+    accessible_report_map = {str(report.id): report for report in accessible_reports}
+    if any(report_id not in accessible_report_map for report_id in report_ids):
+        flash("Hay reportes seleccionados invalidos.", "error")
+        return redirect(url_for("report_consolidation_detail", consolidation_id=consolidation.id))
+
+    consolidation.title = title
+    consolidation.description = description or None
+    consolidation.created_by_id = created_by_id
+    consolidation.created_at = created_at
+    consolidation.reports = [accessible_report_map[report_id] for report_id in sorted(report_ids, key=int)]
+    db.session.commit()
+    flash("Consolidacion actualizada.", "success")
+    return redirect(url_for("report_consolidation_detail", consolidation_id=consolidation.id))
+
+
+@login_required
+def report_consolidation_delete(consolidation_id):
+    if not superadmin_required():
+        return redirect(url_for("report_consolidations"))
+
+    consolidation = ReportConsolidation.query.get_or_404(consolidation_id)
+    db.session.delete(consolidation)
+    db.session.commit()
+    flash("Consolidacion eliminada.", "success")
+    return redirect(url_for("report_consolidations"))
 
 
 @login_required
@@ -480,6 +885,66 @@ def admin_dashboard():
 
 
 @login_required
+def manage_factories():
+    if not superadmin_required():
+        return redirect(url_for("admin_dashboard"))
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Completa el nombre de la fabrica.", "error")
+        elif Factory.query.filter_by(name=name).first():
+            flash("Esa fabrica ya existe.", "error")
+        else:
+            db.session.add(Factory(name=name))
+            db.session.commit()
+            flash("Fabrica creada.", "success")
+        return redirect(url_for("manage_factories"))
+
+    return render_template("manage_factories.html", factories=Factory.query.order_by(Factory.name).all())
+
+
+@login_required
+def edit_factory(factory_id):
+    if not superadmin_required():
+        return redirect(url_for("admin_dashboard"))
+
+    factory = Factory.query.get_or_404(factory_id)
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("Completa el nombre de la fabrica.", "error")
+    elif Factory.query.filter(Factory.name == name, Factory.id != factory.id).first():
+        flash("Ese nombre ya esta en uso.", "error")
+    else:
+        factory.name = name
+        db.session.commit()
+        flash("Fabrica actualizada.", "success")
+    return redirect(url_for("manage_factories"))
+
+
+@login_required
+def delete_factory(factory_id):
+    if not superadmin_required():
+        return redirect(url_for("admin_dashboard"))
+
+    factory = Factory.query.get_or_404(factory_id)
+    if factory.lines:
+        for line in list(factory.lines):
+            for machine in list(line.machines):
+                purge_machine(machine)
+            db.session.delete(line)
+        db.session.delete(factory)
+        db.session.commit()
+        flash("Fabrica eliminada junto con sus lineas, maquinas y datos asociados.", "success")
+        return redirect(url_for("manage_factories"))
+
+    db.session.delete(factory)
+    db.session.commit()
+    flash("Fabrica eliminada.", "success")
+    return redirect(url_for("manage_factories"))
+
+
+@login_required
 def manage_lines():
     if not admin_required():
         return redirect(url_for("reports"))
@@ -507,6 +972,7 @@ def edit_line(line_id):
 
     line = ProductionLine.query.get_or_404(line_id)
     line.name = request.form.get("name", line.name).strip() or line.name
+    line.factory_id = request.form.get("factory_id", type=int) or line.factory_id
     line.active = request.form.get("active") == "on"
     db.session.commit()
     flash("Linea actualizada.", "success")
@@ -679,8 +1145,16 @@ def edit_user(user_id):
         return redirect(url_for("reports"))
 
     user = User.query.get_or_404(user_id)
+    username = request.form.get("username", user.username).strip()
     user.full_name = request.form.get("full_name", user.full_name).strip() or user.full_name
     role = request.form.get("role", user.role).strip()
+    if not username:
+        flash("Completa el usuario.", "error")
+        return redirect(url_for("manage_users"))
+    if User.query.filter(User.username == username, User.id != user.id).first():
+        flash("Ese usuario ya existe.", "error")
+        return redirect(url_for("manage_users"))
+    user.username = username
     if user.role == "superadmin" and not current_user.is_superadmin:
         flash("Solo un superadmin puede editar a otro superadmin.", "error")
         return redirect(url_for("manage_users"))

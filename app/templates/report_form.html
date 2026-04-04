@@ -5,35 +5,49 @@
   <h2>Nuevo reporte</h2>
   <form method="post" enctype="multipart/form-data" class="form-grid">
     <label>Titulo
-      <input type="text" name="title" required>
+      <input type="text" name="title" value="{{ request.form.get('title', '') }}" required>
     </label>
     <label>Categoria
       <select name="category_id" required>
         <option value="">Seleccionar</option>
         {% for category in categories %}
-        <option value="{{ category.id }}">{{ category.name }}</option>
+        <option value="{{ category.id }}" {% if request.form.get('category_id') == (category.id ~ '') %}selected{% endif %}>{{ category.name }}</option>
         {% endfor %}
       </select>
     </label>
     <label>Maquina
-      <select name="machine_id" required>
+      <select name="machine_id" id="machine_id" required>
         <option value="">Seleccionar</option>
         {% for machine in machines %}
-        <option value="{{ machine.id }}">{{ machine.line.name }} - {{ machine.name }}</option>
+        <option value="{{ machine.id }}" {% if request.form.get('machine_id') == (machine.id ~ '') %}selected{% endif %}>{{ machine.line.name }} - {{ machine.name }}</option>
         {% endfor %}
       </select>
     </label>
     <label>Descripcion
-      <textarea name="description" rows="6" required></textarea>
+      <textarea name="description" rows="6" required>{{ request.form.get('description', '') }}</textarea>
     </label>
     <label>Acciones tomadas
-      <textarea name="actions_taken" rows="4" placeholder="Describe las acciones realizadas"></textarea>
+      <textarea name="actions_taken" rows="4" placeholder="Describe las acciones realizadas">{{ request.form.get('actions_taken', '') }}</textarea>
     </label>
     <label>Repuestos usados
-      <textarea name="spare_parts_used" rows="4" placeholder="Indica repuestos o insumos utilizados"></textarea>
+      <textarea name="spare_parts_used" rows="4" placeholder="Indica repuestos o insumos utilizados">{{ request.form.get('spare_parts_used', '') }}</textarea>
     </label>
     <label>Tiempo aproximado de parada (minutos)
-      <input type="number" name="downtime_minutes" min="0" step="1" placeholder="Ej: 35">
+      <input type="number" name="downtime_minutes" min="0" step="1" placeholder="Ej: 35" value="{{ request.form.get('downtime_minutes', '') }}">
+    </label>
+    <label>Parametros vinculados
+      <select name="parameter_ids" id="parameter_ids" multiple size="8">
+        {% for parameter in parameters %}
+        <option
+          value="{{ parameter.id }}"
+          data-machine-id="{{ parameter.machine_id }}"
+          {% if (parameter.id ~ '') in request.form.getlist('parameter_ids') %}selected{% endif %}
+        >
+          {{ parameter.machine.name }} · {{ parameter.parameter_type }} · {{ parameter.name }} ({{ parameter.unit }})
+        </option>
+        {% endfor %}
+      </select>
+      <small class="muted">Puedes seleccionar uno o varios. Solo se habilitan los de la maquina elegida.</small>
     </label>
     <label>Imagenes
       <input type="file" name="images" accept=".png,.jpg,.jpeg,.gif,.webp" multiple>
@@ -41,4 +55,23 @@
     <button type="submit">Guardar reporte</button>
   </form>
 </section>
+<script>
+  const machineSelect = document.getElementById("machine_id");
+  const parameterSelect = document.getElementById("parameter_ids");
+
+  function syncParameterOptions() {
+    const machineId = machineSelect.value;
+    for (const option of parameterSelect.options) {
+      const visible = !machineId || option.dataset.machineId === machineId;
+      option.hidden = !visible;
+      option.disabled = !visible;
+      if (!visible) {
+        option.selected = false;
+      }
+    }
+  }
+
+  machineSelect.addEventListener("change", syncParameterOptions);
+  syncParameterOptions();
+</script>
 {% endblock %}

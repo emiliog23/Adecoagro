@@ -30,7 +30,7 @@
     {% for user in users %}
     <div class="admin-item">
       <form method="post" action="{{ url_for('edit_user', user_id=user.id) }}" class="inline-edit user-edit">
-        <strong>{{ user.username }}</strong>
+        <input type="text" name="username" value="{{ user.username }}" required>
         <input type="text" name="full_name" value="{{ user.full_name }}" required>
         <select name="role">
           {% for role in assignable_roles %}
