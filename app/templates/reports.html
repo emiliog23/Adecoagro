@@ -214,15 +214,16 @@
         {# ── Divider ───────────────────────────────────────────── #}
         <div class="kanban-divider"></div>
 
-        {# ── Cierre comentado ──────────────────────────────────── #}
-        {% set commented_closings = shift_closings | selectattr("status", "equalto", "Cierre comentado") | list %}
-        <div class="kanban-col kanban-col-closing" data-closing-status="Cierre comentado">
+        {# ── Cierres leidos + Cierre comentado ────────────────── #}
+        {% for sc_status in ["Cierres leidos", "Cierre comentado"] %}
+        {% set col_closings = shift_closings | selectattr("status", "equalto", sc_status) | list %}
+        <div class="kanban-col kanban-col-closing" data-closing-status="{{ sc_status }}">
           <div class="col-head">
-            <span class="col-title">Cierre comentado</span>
-            <span class="col-count">{{ commented_closings | length }}</span>
+            <span class="col-title">{{ sc_status }}</span>
+            <span class="col-count">{{ col_closings | length }}</span>
           </div>
           <div class="col-body">
-            {% for closing in commented_closings %}
+            {% for closing in col_closings %}
             <a href="{{ url_for('shift_closing_detail', closing_id=closing.id) }}" class="kanban-card closing-card">
               <div class="kcard-top">
                 <span class="kcard-id">{{ closing.created_at.strftime('%d/%m %H:%M') }}</span>
@@ -237,6 +238,7 @@
             {% endfor %}
           </div>
         </div>
+        {% endfor %}
 
       </section>
     </div>

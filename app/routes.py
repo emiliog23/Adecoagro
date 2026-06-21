@@ -1407,6 +1407,11 @@ def shift_closing_detail(closing_id):
         flash("No tienes acceso a este cierre de turno.", "error")
         return redirect(url_for("reports"))
 
+    # Auto-transition: supervisor opens a new closing → mark as read
+    if current_user.can_review_reports and closing.status == "Nuevo":
+        closing.status = "Cierres leidos"
+        db.session.commit()
+
     if request.method == "POST":
         comment = request.form.get("comment", "").strip()
         if not current_user.can_review_reports:

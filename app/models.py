@@ -30,6 +30,7 @@ WORK_ORDER_USER_STATUSES = {
 
 SHIFT_CLOSING_STATUSES = [
     "Nuevo",
+    "Cierres leidos",
     "Cierre comentado",
 ]
 
