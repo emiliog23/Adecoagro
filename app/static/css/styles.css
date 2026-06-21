@@ -984,7 +984,7 @@ td input[form] {
 /* OT status column header colors */
 .kanban-col[data-ot-status="Nueva"] .col-head                  { background: #fef9c3; color: #713f12; }
 .kanban-col[data-ot-status="Asignada"] .col-head               { background: #dbeafe; color: #1e40af; }
-.kanban-col[data-ot-status="En progreso"] .col-head            { background: #e0f2fe; color: #0369a1; }
+.kanban-col[data-ot-status="Leido por el mecanico"] .col-head  { background: #e0f2fe; color: #0369a1; }
 .kanban-col[data-ot-status="Revision solicitada"] .col-head    { background: #fef3c7; color: #92400e; }
 .kanban-col[data-ot-status="Terminada"] .col-head              { background: #d1fae5; color: #065f46; }
 .kanban-col[data-ot-status="Terminada con problemas"] .col-head{ background: #ffedd5; color: #9a3412; }

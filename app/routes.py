@@ -1316,6 +1316,11 @@ def work_order_detail(ot_id):
         flash("No tienes acceso a esta orden de trabajo.", "error")
         return redirect(url_for("reports"))
 
+    # Auto-transition: assigned user opens the OT → mark as read
+    if ot.assigned_to_id == current_user.id and ot.status == "Asignada":
+        ot.status = "Leido por el mecanico"
+        db.session.commit()
+
     if request.method == "POST":
         comment = request.form.get("comment", "").strip()
         if comment:

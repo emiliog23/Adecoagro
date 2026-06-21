@@ -14,7 +14,7 @@ REPORT_STATUSES = [
 WORK_ORDER_STATUSES = [
     "Nueva",
     "Asignada",
-    "En progreso",
+    "Leido por el mecanico",
     "Revision solicitada",
     "Terminada",
     "Terminada con problemas",
@@ -22,7 +22,7 @@ WORK_ORDER_STATUSES = [
 ]
 
 WORK_ORDER_USER_STATUSES = {
-    "En progreso",
+    "Leido por el mecanico",
     "Terminada",
     "Terminada con problemas",
     "Imposible de terminar",
