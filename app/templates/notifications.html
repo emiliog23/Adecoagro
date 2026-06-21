@@ -16,12 +16,11 @@
       <p class="notif-msg">{{ notif.message }}</p>
       <span class="muted notif-time">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
     </div>
-    {% if notif.report %}
-    <p class="notif-sub muted">
-      OT #{{ notif.report.id }} &mdash; {{ notif.report.title }} &mdash; {{ notif.report.machine.line.name }} / {{ notif.report.machine.name }}
-    </p>
-    <a class="button-link secondary" style="width:auto;padding:0.35rem 0.7rem;font-size:0.82rem;margin-top:0.5rem"
-       href="{{ url_for('report_detail', report_id=notif.report.id) }}">Ver OT</a>
+    {% if notif.work_order %}
+    <p class="notif-sub muted">OT #{{ notif.work_order.id }} &mdash; {{ notif.work_order.title }}</p>
+    {% if notif.work_order.description %}
+    <p class="notif-sub muted">{{ notif.work_order.description }}</p>
+    {% endif %}
     {% endif %}
   </div>
   {% endfor %}
