@@ -77,6 +77,7 @@
       {% if current_user.is_supervisor %}
       <a class="sidebar-create-btn ot-create-btn" href="{{ url_for('work_order_create') }}">+ Nueva OT</a>
       {% endif %}
+      <a class="sidebar-create-btn closing-create-btn" href="{{ url_for('shift_closing_create') }}">+ Cierre de turno</a>
     </div>
 
   </aside>
@@ -169,6 +170,35 @@
           </div>
         </div>
         {% endfor %}
+
+        {# ── Divider ───────────────────────────────────────────── #}
+        <div class="kanban-divider"></div>
+
+        {# ── Cierres de turno column ───────────────────────────── #}
+        <div class="kanban-col kanban-col-closing">
+          <div class="col-head col-head-closing">
+            <span class="col-title">Cierres de turno</span>
+            <span class="col-count">{{ shift_closings | length }}</span>
+          </div>
+          <div class="col-body">
+            {% for closing in shift_closings %}
+            <a href="{{ url_for('shift_closing_detail', closing_id=closing.id) }}" class="kanban-card closing-card">
+              <div class="kcard-top">
+                <span class="kcard-id">{{ closing.created_at.strftime('%d/%m %H:%M') }}</span>
+                {% if closing.status == "Cierre comentado" %}
+                <span class="kcard-closing-badge">Comentado</span>
+                {% endif %}
+              </div>
+              <div class="kcard-title">{{ closing.comment[:100] }}{% if closing.comment | length > 100 %}...{% endif %}</div>
+              <div class="kcard-footer">
+                <span class="kcard-user">{{ closing.created_by.full_name }}</span>
+              </div>
+            </a>
+            {% else %}
+            <div class="col-empty">Sin cierres</div>
+            {% endfor %}
+          </div>
+        </div>
 
       </section>
     </div>

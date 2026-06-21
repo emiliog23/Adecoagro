@@ -22,6 +22,9 @@ from .models import (
     Report,
     ReportConsolidation,
     ReportComment,
+    SHIFT_CLOSING_STATUSES,
+    ShiftClosing,
+    ShiftClosingComment,
     USER_ROLES,
     User,
     WORK_ORDER_STATUSES,
@@ -260,6 +263,11 @@ def reports():
     categories = Category.query.order_by(Category.name).all()
     users = User.query.order_by(User.full_name).all() if current_user.can_review_reports else []
 
+    if current_user.can_review_reports:
+        shift_closings = ShiftClosing.query.order_by(ShiftClosing.created_at.desc()).all()
+    else:
+        shift_closings = ShiftClosing.query.filter_by(created_by_id=current_user.id).order_by(ShiftClosing.created_at.desc()).all()
+
     return render_template(
         "reports.html",
         reports_by_status=reports_by_status,
@@ -276,6 +284,7 @@ def reports():
         ots_by_status=ots_by_status,
         ot_statuses=WORK_ORDER_STATUSES,
         assignable_users=assignable_users,
+        shift_closings=shift_closings,
     )
 
 
@@ -1372,3 +1381,49 @@ def work_order_status_update(ot_id):
     db.session.commit()
     flash("Estado actualizado.", "success")
     return redirect(url_for("work_order_detail", ot_id=ot.id))
+
+
+# ── Shift Closings ─────────────────────────────────────────────────────────
+
+@login_required
+def shift_closing_create():
+    if request.method == "POST":
+        comment = request.form.get("comment", "").strip()
+        if not comment:
+            flash("El comentario es obligatorio.", "error")
+            return render_template("shift_closing_form.html")
+        closing = ShiftClosing(comment=comment, created_by_id=current_user.id)
+        db.session.add(closing)
+        db.session.commit()
+        flash("Cierre de turno registrado.", "success")
+        return redirect(url_for("reports"))
+    return render_template("shift_closing_form.html")
+
+
+@login_required
+def shift_closing_detail(closing_id):
+    closing = ShiftClosing.query.get_or_404(closing_id)
+    if not current_user.can_review_reports and closing.created_by_id != current_user.id:
+        flash("No tienes acceso a este cierre de turno.", "error")
+        return redirect(url_for("reports"))
+
+    if request.method == "POST":
+        comment = request.form.get("comment", "").strip()
+        if not current_user.can_review_reports:
+            flash("Solo supervisores pueden comentar un cierre de turno.", "error")
+            return redirect(url_for("shift_closing_detail", closing_id=closing.id))
+        if not comment:
+            flash("Escribe un comentario.", "error")
+            return redirect(url_for("shift_closing_detail", closing_id=closing.id))
+        db.session.add(ShiftClosingComment(
+            content=comment,
+            shift_closing_id=closing.id,
+            created_by_id=current_user.id,
+        ))
+        if closing.status == "Nuevo":
+            closing.status = "Cierre comentado"
+        db.session.commit()
+        flash("Comentario agregado.", "success")
+        return redirect(url_for("shift_closing_detail", closing_id=closing.id))
+
+    return render_template("shift_closing_detail.html", closing=closing)

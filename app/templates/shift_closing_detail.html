@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Cierre de turno #{{ closing.id }} | adecoagro{% endblock %}
+{% block content %}
+
+<section class="card">
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">Cierre de turno #{{ closing.id }}</p>
+      <p class="muted">{{ closing.created_at.strftime('%d/%m/%Y %H:%M') }} &mdash; {{ closing.created_by.full_name }}</p>
+    </div>
+    <span class="status-badge large">{{ closing.status }}</span>
+  </div>
+  <p style="white-space:pre-wrap">{{ closing.comment }}</p>
+</section>
+
+{% if current_user.can_review_reports %}
+<section class="card">
+  <h3>Comentar cierre</h3>
+  <form method="post" class="form-grid">
+    <label>Comentario del supervisor
+      <textarea name="comment" rows="4" placeholder="Observacion, aprobacion o indicacion sobre el turno..."></textarea>
+    </label>
+    <button type="submit">Guardar comentario</button>
+  </form>
+</section>
+{% endif %}
+
+{% if closing.supervisor_comments %}
+<section class="card">
+  <h3>Comentarios del supervisor</h3>
+  <div class="comment-list">
+    {% for sc in closing.supervisor_comments | sort(attribute='created_at', reverse=True) %}
+    <article class="comment-card">
+      <p>{{ sc.content }}</p>
+      <p class="muted">{{ sc.created_by.full_name }} &middot; {{ sc.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+    </article>
+    {% endfor %}
+  </div>
+{% elif not current_user.can_review_reports %}
+<section class="card">
+  <p class="muted">Aun no hay comentarios del supervisor.</p>
+{% endif %}
+</section>
+
+{% endblock %}

@@ -28,6 +28,11 @@ WORK_ORDER_USER_STATUSES = {
     "Imposible de terminar",
 }
 
+SHIFT_CLOSING_STATUSES = [
+    "Nuevo",
+    "Cierre comentado",
+]
+
 PARAMETER_REPORT_TYPES = [
     "Receta",
     "Mecanico",
@@ -69,6 +74,7 @@ class User(UserMixin, db.Model):
         back_populates="assigned_to",
         lazy=True,
     )
+    shift_closings = db.relationship("ShiftClosing", back_populates="created_by", lazy=True)
     notifications = db.relationship(
         "Notification",
         back_populates="user",
@@ -287,6 +293,32 @@ class WorkOrderComment(db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
     work_order = db.relationship("WorkOrder", back_populates="comments")
+    created_by = db.relationship("User")
+
+
+class ShiftClosing(db.Model):
+    __tablename__ = "shift_closing"
+    id = db.Column(db.Integer, primary_key=True)
+    comment = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(30), nullable=False, default="Nuevo")
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    created_by = db.relationship("User", back_populates="shift_closings")
+    supervisor_comments = db.relationship(
+        "ShiftClosingComment", back_populates="shift_closing", cascade="all, delete-orphan", lazy=True
+    )
+
+
+class ShiftClosingComment(db.Model):
+    __tablename__ = "shift_closing_comment"
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    shift_closing_id = db.Column(db.Integer, db.ForeignKey("shift_closing.id"), nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    shift_closing = db.relationship("ShiftClosing", back_populates="supervisor_comments")
     created_by = db.relationship("User")
 
 

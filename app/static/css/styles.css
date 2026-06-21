@@ -990,6 +990,42 @@ td input[form] {
 .kanban-col[data-ot-status="Terminada con problemas"] .col-head{ background: #ffedd5; color: #9a3412; }
 .kanban-col[data-ot-status="Imposible de terminar"] .col-head  { background: #fee2e2; color: #991b1b; }
 
+/* Shift closing column */
+
+.kanban-col-closing {
+  background: #f5f0fb;
+}
+
+.col-head-closing {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.closing-card {
+  border-left: 3px solid #8b5cf6;
+}
+
+.kcard-closing-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: #ede9fe;
+  color: #5b21b6;
+  border: 1px solid #c4b5fd;
+  flex-shrink: 0;
+}
+
+.closing-create-btn {
+  border-color: #7c3aed;
+  color: #7c3aed;
+}
+
+.closing-create-btn:hover {
+  background: #7c3aed;
+  color: #fff;
+}
+
 /* Divider between reports and OTs */
 
 .kanban-divider {

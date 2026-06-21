@@ -83,6 +83,8 @@ def create_app():
     app.add_url_rule("/ordenes-trabajo/<int:ot_id>/estado", view_func=routes.work_order_status_update, methods=["POST"])
     app.add_url_rule("/notificaciones", view_func=routes.notifications_list)
     app.add_url_rule("/notificaciones/cuenta", view_func=routes.notifications_count)
+    app.add_url_rule("/cierres-de-turno/nuevo", view_func=routes.shift_closing_create, methods=["GET", "POST"])
+    app.add_url_rule("/cierres-de-turno/<int:closing_id>", view_func=routes.shift_closing_detail, methods=["GET", "POST"])
 
     @app.context_processor
     def inject_notification_count():

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Cierre de turno | adecoagro{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h2>Cierre de turno</h2>
+    <p class="muted">Registro de novedades al finalizar el turno.</p>
+  </div>
+</section>
+
+<div class="narrow">
+  <div class="card">
+    <form method="post" class="form-grid">
+      <label>Novedades del turno <span style="color:var(--danger)">*</span>
+        <textarea name="comment" rows="6" required autofocus
+          placeholder="Describe las novedades, incidencias o estado general del turno..."></textarea>
+      </label>
+      <div class="action-row">
+        <button type="submit">Registrar cierre</button>
+        <a class="button-link secondary" href="{{ url_for('reports') }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
