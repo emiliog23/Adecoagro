@@ -4,7 +4,7 @@
 <section class="page-head">
   <div>
     <h2>Nueva orden de trabajo</h2>
-    <p class="muted">Solo supervisores pueden crear y asignar ordenes de trabajo.</p>
+    <p class="muted">Solo supervisores pueden crear ordenes de trabajo.</p>
   </div>
 </section>
 
@@ -15,7 +15,23 @@
         <input type="text" name="title" required maxlength="150" autofocus>
       </label>
       <label>Descripcion
-        <textarea name="description" rows="4" placeholder="Detalle de la tarea (opcional)"></textarea>
+        <textarea name="description" rows="3" placeholder="Detalle de la tarea (opcional)"></textarea>
+      </label>
+      <label>Maquina <span style="color:var(--danger)">*</span>
+        <select name="machine_id" required>
+          <option value="">-- seleccionar --</option>
+          {% for machine in machines %}
+          <option value="{{ machine.id }}">{{ machine.line.name }} / {{ machine.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Categoria <span style="color:var(--danger)">*</span>
+        <select name="category_id" required>
+          <option value="">-- seleccionar --</option>
+          {% for category in categories %}
+          <option value="{{ category.id }}">{{ category.name }}</option>
+          {% endfor %}
+        </select>
       </label>
       <div class="action-row">
         <button type="submit">Crear OT</button>

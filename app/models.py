@@ -36,24 +36,23 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), nullable=False, default="usuario")
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    reports = db.relationship("Report", back_populates="created_by", lazy=True)
+    reports = db.relationship(
+        "Report",
+        foreign_keys="Report.created_by_id",
+        back_populates="created_by",
+        lazy=True,
+    )
+    reports_assigned = db.relationship(
+        "Report",
+        foreign_keys="Report.assigned_to_id",
+        back_populates="assigned_to",
+        lazy=True,
+    )
     comments = db.relationship("ReportComment", back_populates="created_by", lazy=True)
     consolidations_created = db.relationship(
         "ReportConsolidation",
         back_populates="created_by",
         cascade="all, delete-orphan",
-        lazy=True,
-    )
-    work_orders_created = db.relationship(
-        "WorkOrder",
-        foreign_keys="WorkOrder.created_by_id",
-        back_populates="created_by",
-        lazy=True,
-    )
-    work_orders_assigned = db.relationship(
-        "WorkOrder",
-        foreign_keys="WorkOrder.assigned_to_id",
-        back_populates="assigned_to",
         lazy=True,
     )
     notifications = db.relationship(
@@ -148,18 +147,22 @@ class Report(db.Model):
     spare_parts_used = db.Column(db.Text, nullable=True)
     downtime_minutes = db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(40), nullable=False, default="Nuevo")
+    report_type = db.Column(db.String(30), nullable=False, default="Reporte")
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     category_id = db.Column(db.Integer, db.ForeignKey("category.id"), nullable=False)
     machine_id = db.Column(db.Integer, db.ForeignKey("machine.id"), nullable=False)
     created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
     category = db.relationship("Category", back_populates="reports")
     machine = db.relationship("Machine", back_populates="reports")
-    created_by = db.relationship("User", back_populates="reports")
+    created_by = db.relationship("User", foreign_keys=[created_by_id], back_populates="reports")
+    assigned_to = db.relationship("User", foreign_keys=[assigned_to_id], back_populates="reports_assigned")
     attachments = db.relationship("Attachment", back_populates="report", cascade="all, delete-orphan", lazy=True)
     comments = db.relationship("ReportComment", back_populates="report", cascade="all, delete-orphan", lazy=True)
+    notifications = db.relationship("Notification", back_populates="report", cascade="all, delete-orphan", lazy=True)
     parameters = db.relationship(
         "MachineParameter",
         secondary=report_parameter_links,
@@ -172,6 +175,18 @@ class Report(db.Model):
         back_populates="reports",
         lazy=True,
     )
+
+    @property
+    def is_ot(self):
+        return self.report_type == "OT"
+
+    def can_act(self, user):
+        """True if user can update status and comment on this item."""
+        if user.can_review_reports:
+            return True
+        if self.is_ot and self.assigned_to_id == user.id:
+            return True
+        return False
 
 
 class ReportConsolidation(db.Model):
@@ -248,21 +263,6 @@ class MachineParameterReading(db.Model):
     created_by = db.relationship("User")
 
 
-class WorkOrder(db.Model):
-    __tablename__ = "work_order"
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(150), nullable=False)
-    description = db.Column(db.Text, nullable=True)
-    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    assigned_to_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-    created_by = db.relationship("User", foreign_keys=[created_by_id], back_populates="work_orders_created")
-    assigned_to = db.relationship("User", foreign_keys=[assigned_to_id], back_populates="work_orders_assigned")
-    notifications = db.relationship("Notification", back_populates="work_order", cascade="all, delete-orphan", lazy=True)
-
-
 class Notification(db.Model):
     __tablename__ = "notification"
     id = db.Column(db.Integer, primary_key=True)
@@ -270,10 +270,10 @@ class Notification(db.Model):
     message = db.Column(db.String(300), nullable=False)
     is_read = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    work_order_id = db.Column(db.Integer, db.ForeignKey("work_order.id"), nullable=True)
+    report_id = db.Column(db.Integer, db.ForeignKey("report.id"), nullable=True)
 
     user = db.relationship("User", back_populates="notifications")
-    work_order = db.relationship("WorkOrder", back_populates="notifications")
+    report = db.relationship("Report", back_populates="notifications")
 
 
 @login_manager.user_loader
@@ -348,15 +348,26 @@ def seed_data():
 
 
 def ensure_schema():
-    columns = {column["name"] for column in db.session.execute(db.text("PRAGMA table_info(report)")).mappings()}
+    report_cols = {c["name"] for c in db.session.execute(db.text("PRAGMA table_info(report)")).mappings()}
     migrations = []
 
-    if "actions_taken" not in columns:
+    if "actions_taken" not in report_cols:
         migrations.append("ALTER TABLE report ADD COLUMN actions_taken TEXT")
-    if "spare_parts_used" not in columns:
+    if "spare_parts_used" not in report_cols:
         migrations.append("ALTER TABLE report ADD COLUMN spare_parts_used TEXT")
-    if "downtime_minutes" not in columns:
+    if "downtime_minutes" not in report_cols:
         migrations.append("ALTER TABLE report ADD COLUMN downtime_minutes INTEGER")
+    if "report_type" not in report_cols:
+        migrations.append("ALTER TABLE report ADD COLUMN report_type TEXT NOT NULL DEFAULT 'Reporte'")
+    if "assigned_to_id" not in report_cols:
+        migrations.append("ALTER TABLE report ADD COLUMN assigned_to_id INTEGER REFERENCES user(id)")
+
+    # notification table may exist from a previous schema with work_order_id
+    tables = {r["name"] for r in db.session.execute(db.text("SELECT name FROM sqlite_master WHERE type='table'")).mappings()}
+    if "notification" in tables:
+        notif_cols = {c["name"] for c in db.session.execute(db.text("PRAGMA table_info(notification)")).mappings()}
+        if "report_id" not in notif_cols:
+            migrations.append("ALTER TABLE notification ADD COLUMN report_id INTEGER REFERENCES report(id)")
 
     for statement in migrations:
         db.session.execute(db.text(statement))

@@ -17,26 +17,27 @@
       </a>
 
       {% for factory in factories %}
-      <div class="ftree-factory-block">
-        <a href="?factory_id={{ factory.id }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if user_filter %}&user_id={{ user_filter }}{% endif %}"
-           class="ftree-item ftree-factory {% if factory_filter == factory.id and not line_filter and not machine_filter %}active{% endif %}">
-          {{ factory.name }}
-        </a>
+      <details class="ftree-group" open>
+        <summary class="ftree-summary">{{ factory.name }}</summary>
+
         {% for line in factory.lines %}
-        <div class="ftree-line-block">
-          <a href="?line_id={{ line.id }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if user_filter %}&user_id={{ user_filter }}{% endif %}"
-             class="ftree-item ftree-line {% if line_filter == line.id and not machine_filter %}active{% endif %}">
-            {{ line.name }}
-          </a>
+        <details class="ftree-group" open>
+          <summary class="ftree-summary ftree-line-summary">
+            <a href="?line_id={{ line.id }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if user_filter %}&user_id={{ user_filter }}{% endif %}"
+               class="ftree-line-link {% if line_filter == line.id and not machine_filter %}active{% endif %}"
+               onclick="event.stopPropagation()">{{ line.name }}</a>
+          </summary>
+
           {% for machine in line.machines %}
           <a href="?machine_id={{ machine.id }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if user_filter %}&user_id={{ user_filter }}{% endif %}"
              class="ftree-item ftree-machine {% if machine_filter == machine.id %}active{% endif %}">
             {{ machine.name }}
           </a>
           {% endfor %}
-        </div>
+        </details>
         {% endfor %}
-      </div>
+
+      </details>
       {% endfor %}
     </nav>
 
@@ -104,8 +105,6 @@
 
     <div class="board-scroll">
       <section class="kanban-board">
-
-        {# Report columns #}
         {% for status in statuses %}
         {% set col_reports = reports_by_status[status] %}
         <div class="kanban-col" data-status="{{ status }}">
@@ -115,12 +114,23 @@
           </div>
           <div class="col-body">
             {% for report in col_reports %}
-            <a href="{{ url_for('report_detail', report_id=report.id) }}" class="kanban-card">
-              <div class="kcard-id">#{{ report.id }}</div>
+            <a href="{{ url_for('report_detail', report_id=report.id) }}"
+               class="kanban-card {% if report.is_ot %}ot-card{% endif %}"
+               {% if report.is_ot and not report.assigned_to_id and current_user.is_supervisor %}data-ot-id="{{ report.id }}" title="Clic derecho para asignar"{% endif %}>
+              <div class="kcard-top">
+                <span class="kcard-id">#{{ report.id }}</span>
+                {% if report.is_ot %}<span class="kcard-ot-badge">OT</span>{% endif %}
+              </div>
               <div class="kcard-title">{{ report.title }}</div>
               <div class="kcard-footer">
                 <span class="kcard-machine">{{ report.machine.name }}</span>
-                <span class="kcard-user">{{ report.created_by.full_name }}</span>
+                <span class="kcard-user">
+                  {%- if report.is_ot and report.assigned_to -%}
+                    Para: {{ report.assigned_to.full_name }}
+                  {%- else -%}
+                    {{ report.created_by.full_name }}
+                  {%- endif -%}
+                </span>
               </div>
             </a>
             {% else %}
@@ -139,7 +149,7 @@
           <div class="col-body">
             {% for report in others %}
             <a href="{{ url_for('report_detail', report_id=report.id) }}" class="kanban-card">
-              <div class="kcard-id">#{{ report.id }} · {{ report.status }}</div>
+              <div class="kcard-top"><span class="kcard-id">#{{ report.id }}</span></div>
               <div class="kcard-title">{{ report.title }}</div>
               <div class="kcard-footer">
                 <span class="kcard-machine">{{ report.machine.name }}</span>
@@ -150,68 +160,15 @@
           </div>
         </div>
         {% endif %}
-
-        {# Divider between reports and OT #}
-        <div class="kanban-divider"></div>
-
-        {# OT columns #}
-        <div class="kanban-col kanban-col-ot" data-status="OT sin asignar">
-          <div class="col-head">
-            <span class="col-title">OT sin asignar</span>
-            <span class="col-count">{{ ots_unassigned | length }}</span>
-          </div>
-          <div class="col-body">
-            {% for ot in ots_unassigned %}
-            <div class="kanban-card ot-card"
-                 data-ot-id="{{ ot.id }}"
-                 title="Clic derecho para asignar">
-              <div class="kcard-id">OT #{{ ot.id }}</div>
-              <div class="kcard-title">{{ ot.title }}</div>
-              {% if ot.description %}
-              <div class="kcard-desc">{{ ot.description[:80] }}{% if ot.description | length > 80 %}...{% endif %}</div>
-              {% endif %}
-              <div class="kcard-footer">
-                <span class="kcard-user">Por: {{ ot.created_by.full_name }}</span>
-              </div>
-            </div>
-            {% else %}
-            <div class="col-empty">Sin OT pendientes</div>
-            {% endfor %}
-          </div>
-        </div>
-
-        <div class="kanban-col kanban-col-ot" data-status="OT asignadas">
-          <div class="col-head">
-            <span class="col-title">OT asignadas</span>
-            <span class="col-count">{{ ots_assigned | length }}</span>
-          </div>
-          <div class="col-body">
-            {% for ot in ots_assigned %}
-            <div class="kanban-card ot-card ot-assigned">
-              <div class="kcard-id">OT #{{ ot.id }}</div>
-              <div class="kcard-title">{{ ot.title }}</div>
-              {% if ot.description %}
-              <div class="kcard-desc">{{ ot.description[:80] }}{% if ot.description | length > 80 %}...{% endif %}</div>
-              {% endif %}
-              <div class="kcard-footer">
-                <span class="kcard-user">Para: {{ ot.assigned_to.full_name }}</span>
-              </div>
-            </div>
-            {% else %}
-            <div class="col-empty">Sin OT asignadas</div>
-            {% endfor %}
-          </div>
-        </div>
-
       </section>
     </div>
   </div>
 </div>
 
-{# ── Right-click context menu (supervisor only) ────────────────── #}
+{# ── Right-click context menu for unassigned OTs ─────────────── #}
 {% if current_user.is_supervisor and assignable_users %}
 <div id="ot-context-menu" class="context-menu" style="display:none">
-  <div class="context-menu-title">Asignar a:</div>
+  <div class="context-menu-title">Asignar OT a:</div>
   {% for user in assignable_users %}
   <button class="context-menu-item" data-user-id="{{ user.id }}">{{ user.full_name }}</button>
   {% endfor %}
@@ -222,7 +179,7 @@
   var menu = document.getElementById("ot-context-menu");
   var currentOtId = null;
 
-  document.querySelectorAll(".ot-card[data-ot-id]").forEach(function (card) {
+  document.querySelectorAll("[data-ot-id]").forEach(function (card) {
     card.addEventListener("contextmenu", function (e) {
       e.preventDefault();
       currentOtId = card.dataset.otId;

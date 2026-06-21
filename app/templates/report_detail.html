@@ -4,7 +4,9 @@
 <section class="card">
   <div class="page-head">
     <div>
-      <p class="eyebrow">Reporte #{{ report.id }}</p>
+      <p class="eyebrow">
+        {% if report.is_ot %}Orden de trabajo{% else %}Reporte{% endif %} #{{ report.id }}
+      </p>
       <h2>{{ report.title }}</h2>
       <p class="muted">{{ report.created_at.strftime('%d/%m/%Y %H:%M') }} por {{ report.created_by.full_name }}</p>
     </div>
@@ -15,9 +17,33 @@
     <li><strong>Categoria:</strong> {{ report.category.name }}</li>
     <li><strong>Linea:</strong> {{ report.machine.line.name }}</li>
     <li><strong>Maquina:</strong> {{ report.machine.name }}</li>
+    {% if not report.is_ot %}
     <li><strong>Tiempo aproximado de parada:</strong> {% if report.downtime_minutes is not none %}{{ report.downtime_minutes }} min{% else %}No informado{% endif %}</li>
+    {% endif %}
   </ul>
 </section>
+
+{% if report.is_ot %}
+<section class="card">
+  <h3>Asignacion de OT</h3>
+  {% if report.assigned_to %}
+  <p><strong>Asignada a:</strong> {{ report.assigned_to.full_name }}</p>
+  {% else %}
+  <p class="muted">Sin asignar</p>
+  {% endif %}
+  {% if current_user.is_supervisor %}
+  <form method="post" action="{{ url_for('work_order_assign', ot_id=report.id) }}" class="inline-form" style="margin-top:0.75rem">
+    <select name="user_id">
+      <option value="">-- elegir usuario --</option>
+      {% for user in assignable_users %}
+      <option value="{{ user.id }}" {% if report.assigned_to_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">{% if report.assigned_to %}Reasignar{% else %}Asignar{% endif %}</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
 
 {% if current_user.is_superadmin %}
 <section class="card">
@@ -155,7 +181,7 @@
 {% endif %}
 
 <section class="card">
-  {% if current_user.can_review_reports %}
+  {% if report.can_act(current_user) %}
   <h3>Cambiar estado</h3>
   <form method="post" action="{{ url_for('report_status_update', report_id=report.id) }}" class="inline-form">
     <select name="status">
@@ -166,8 +192,8 @@
     <button type="submit">Actualizar</button>
   </form>
   {% endif %}
-  <h3>Comentarios del supervisor</h3>
-  {% if current_user.can_review_reports %}
+  <h3>Comentarios</h3>
+  {% if report.can_act(current_user) %}
   <form method="post" action="{{ url_for('report_detail', report_id=report.id) }}" class="form-grid">
     <label>Nuevo comentario
       <textarea name="comment" rows="4" placeholder="Agregar observacion, seguimiento o indicacion"></textarea>

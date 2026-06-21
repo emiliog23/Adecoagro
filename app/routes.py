@@ -8,6 +8,8 @@ from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.utils import secure_filename
 
 from . import db
+from sqlalchemy import or_
+
 from .models import (
     Attachment,
     Category,
@@ -24,7 +26,6 @@ from .models import (
     ReportComment,
     USER_ROLES,
     User,
-    WorkOrder,
     report_consolidation_links,
     report_parameter_links,
 )
@@ -71,7 +72,12 @@ def delete_report_record(report):
 def build_accessible_reports_query():
     query = Report.query.order_by(Report.created_at.desc())
     if not current_user.can_review_reports:
-        query = query.filter_by(created_by_id=current_user.id)
+        query = query.filter(
+            or_(
+                Report.created_by_id == current_user.id,
+                Report.assigned_to_id == current_user.id,
+            )
+        )
     return query
 
 
@@ -241,14 +247,7 @@ def reports():
         else:
             others.append(report)
 
-    if current_user.is_supervisor:
-        ots_unassigned = WorkOrder.query.filter_by(assigned_to_id=None).order_by(WorkOrder.created_at.desc()).all()
-        ots_assigned = WorkOrder.query.filter(WorkOrder.assigned_to_id.isnot(None)).order_by(WorkOrder.updated_at.desc()).all()
-        assignable_users = User.query.order_by(User.full_name).all()
-    else:
-        ots_unassigned = []
-        ots_assigned = WorkOrder.query.filter_by(assigned_to_id=current_user.id).order_by(WorkOrder.updated_at.desc()).all()
-        assignable_users = []
+    assignable_users = User.query.order_by(User.full_name).all() if current_user.is_supervisor else []
 
     factories = Factory.query.order_by(Factory.name).all()
     categories = Category.query.order_by(Category.name).all()
@@ -267,8 +266,6 @@ def reports():
         machine_filter=machine_filter,
         category_filter=category_filter,
         user_filter=user_filter,
-        ots_unassigned=ots_unassigned,
-        ots_assigned=ots_assigned,
         assignable_users=assignable_users,
     )
 
@@ -624,13 +621,13 @@ def report_create():
 @login_required
 def report_detail(report_id):
     report = Report.query.get_or_404(report_id)
-    if not current_user.can_review_reports and report.created_by_id != current_user.id:
+    if not current_user.can_review_reports and report.created_by_id != current_user.id and report.assigned_to_id != current_user.id:
         flash("No tienes acceso a este reporte.", "error")
         return redirect(url_for("reports"))
 
     if request.method == "POST":
         comment = request.form.get("comment", "").strip()
-        if current_user.can_review_reports and comment:
+        if report.can_act(current_user) and comment:
             db.session.add(ReportComment(content=comment, report_id=report.id, created_by_id=current_user.id))
             db.session.commit()
             flash("Comentario agregado.", "success")
@@ -646,6 +643,7 @@ def report_detail(report_id):
         categories=Category.query.order_by(Category.name).all(),
         machines=Machine.query.order_by(Machine.name).all(),
         parameters=build_parameter_choices(),
+        assignable_users=User.query.order_by(User.full_name).all() if current_user.is_supervisor else [],
     )
 
 
@@ -855,10 +853,11 @@ def report_consolidation_delete(consolidation_id):
 
 @login_required
 def report_status_update(report_id):
-    if not reviewer_required():
-        return redirect(url_for("reports"))
-
     report = Report.query.get_or_404(report_id)
+    if not report.can_act(current_user):
+        flash("No tienes permiso para cambiar el estado.", "error")
+        return redirect(url_for("report_detail", report_id=report.id))
+
     new_status = request.form.get("status", "").strip()
     if new_status not in REPORT_STATUSES:
         flash("Estado invalido.", "error")
@@ -1233,19 +1232,34 @@ def work_order_create():
         flash("Solo supervisores pueden crear ordenes de trabajo.", "error")
         return redirect(url_for("reports"))
 
+    lines = ProductionLine.query.order_by(ProductionLine.name).all()
+    machines = Machine.query.filter_by(active=True).order_by(Machine.name).all()
+    categories = Category.query.filter_by(active=True).order_by(Category.name).all()
+
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
-        if not title:
-            flash("El titulo es obligatorio.", "error")
-            return render_template("work_order_form.html")
-        ot = WorkOrder(title=title, description=description or None, created_by_id=current_user.id)
+        machine_id = request.form.get("machine_id", type=int)
+        category_id = request.form.get("category_id", type=int)
+
+        if not title or not machine_id or not category_id:
+            flash("Completa titulo, maquina y categoria.", "error")
+            return render_template("work_order_form.html", lines=lines, machines=machines, categories=categories)
+
+        ot = Report(
+            title=title,
+            description=description or "-",
+            report_type="OT",
+            category_id=category_id,
+            machine_id=machine_id,
+            created_by_id=current_user.id,
+        )
         db.session.add(ot)
         db.session.commit()
         flash("Orden de trabajo creada.", "success")
-        return redirect(url_for("reports"))
+        return redirect(url_for("report_detail", report_id=ot.id))
 
-    return render_template("work_order_form.html")
+    return render_template("work_order_form.html", lines=lines, machines=machines, categories=categories)
 
 
 @login_required
@@ -1254,17 +1268,20 @@ def work_order_assign(ot_id):
         flash("Solo supervisores pueden asignar ordenes de trabajo.", "error")
         return redirect(url_for("reports"))
 
-    ot = WorkOrder.query.get_or_404(ot_id)
+    ot = Report.query.get_or_404(ot_id)
+    if not ot.is_ot:
+        flash("Este elemento no es una orden de trabajo.", "error")
+        return redirect(url_for("reports"))
+
     user_id = request.form.get("user_id", type=int)
     user = User.query.get_or_404(user_id)
 
     ot.assigned_to_id = user.id
-    notif = Notification(
+    db.session.add(Notification(
         user_id=user.id,
         message=f"Se te asigno la orden de trabajo: {ot.title}",
-        work_order_id=ot.id,
-    )
-    db.session.add(notif)
+        report_id=ot.id,
+    ))
     db.session.commit()
     flash(f"OT asignada a {user.full_name}.", "success")
     return redirect(url_for("reports"))
