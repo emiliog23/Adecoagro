@@ -1003,6 +1003,17 @@ td input[form] {
   border-left: 3px solid #8b5cf6;
 }
 
+.kcard-type-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  flex-shrink: 0;
+}
+
 .kcard-closing-badge {
   font-size: 0.62rem;
   font-weight: 700;

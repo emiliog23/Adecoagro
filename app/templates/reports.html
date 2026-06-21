@@ -88,8 +88,48 @@
     <div class="board-scroll">
       <section class="kanban-board">
 
-        {# ── Report status columns ─────────────────────────── #}
-        {% for status in statuses %}
+        {# ── Nuevo: reportes + cierres de turno nuevos ────────── #}
+        {% set new_reports = reports_by_status["Nuevo"] %}
+        {% set new_closings = shift_closings | selectattr("status", "equalto", "Nuevo") | list %}
+        <div class="kanban-col" data-status="Nuevo">
+          <div class="col-head">
+            <span class="col-title">Nuevo</span>
+            <span class="col-count">{{ (new_reports | length) + (new_closings | length) }}</span>
+          </div>
+          <div class="col-body">
+            {% for report in new_reports %}
+            <a href="{{ url_for('report_detail', report_id=report.id) }}" class="kanban-card">
+              <div class="kcard-top">
+                <span class="kcard-id">#{{ report.id }}</span>
+                <span class="kcard-type-badge">Reporte</span>
+              </div>
+              <div class="kcard-title">{{ report.title }}</div>
+              <div class="kcard-footer">
+                <span class="kcard-machine">{{ report.machine.name }}</span>
+                <span class="kcard-user">{{ report.created_by.full_name }}</span>
+              </div>
+            </a>
+            {% endfor %}
+            {% for closing in new_closings %}
+            <a href="{{ url_for('shift_closing_detail', closing_id=closing.id) }}" class="kanban-card closing-card">
+              <div class="kcard-top">
+                <span class="kcard-id">{{ closing.created_at.strftime('%d/%m %H:%M') }}</span>
+                <span class="kcard-closing-badge">Cierre</span>
+              </div>
+              <div class="kcard-title">{{ closing.comment[:100] }}{% if closing.comment | length > 100 %}...{% endif %}</div>
+              <div class="kcard-footer">
+                <span class="kcard-user">{{ closing.created_by.full_name }}</span>
+              </div>
+            </a>
+            {% endfor %}
+            {% if not new_reports and not new_closings %}
+            <div class="col-empty">Sin elementos</div>
+            {% endif %}
+          </div>
+        </div>
+
+        {# ── Remaining report columns (Leido, Observado) ──────── #}
+        {% for status in statuses[1:] %}
         {% set col_reports = reports_by_status[status] %}
         <div class="kanban-col" data-status="{{ status }}">
           <div class="col-head">
@@ -174,16 +214,15 @@
         {# ── Divider ───────────────────────────────────────────── #}
         <div class="kanban-divider"></div>
 
-        {# ── Cierres de turno columns ──────────────────────────── #}
-        {% for sc_status, sc_label in [("Nuevo", "Cierres de turno"), ("Cierre comentado", "Cierre comentado")] %}
-        {% set col_closings = shift_closings | selectattr("status", "equalto", sc_status) | list %}
-        <div class="kanban-col kanban-col-closing" data-closing-status="{{ sc_status }}">
-          <div class="col-head col-head-closing">
-            <span class="col-title">{{ sc_label }}</span>
-            <span class="col-count">{{ col_closings | length }}</span>
+        {# ── Cierre comentado ──────────────────────────────────── #}
+        {% set commented_closings = shift_closings | selectattr("status", "equalto", "Cierre comentado") | list %}
+        <div class="kanban-col kanban-col-closing" data-closing-status="Cierre comentado">
+          <div class="col-head">
+            <span class="col-title">Cierre comentado</span>
+            <span class="col-count">{{ commented_closings | length }}</span>
           </div>
           <div class="col-body">
-            {% for closing in col_closings %}
+            {% for closing in commented_closings %}
             <a href="{{ url_for('shift_closing_detail', closing_id=closing.id) }}" class="kanban-card closing-card">
               <div class="kcard-top">
                 <span class="kcard-id">{{ closing.created_at.strftime('%d/%m %H:%M') }}</span>
@@ -198,7 +237,6 @@
             {% endfor %}
           </div>
         </div>
-        {% endfor %}
 
       </section>
     </div>
