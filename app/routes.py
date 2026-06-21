@@ -15,6 +15,7 @@ from .models import (
     Machine,
     MachineParameter,
     MachineParameterReading,
+    Notification,
     PARAMETER_REPORT_TYPES,
     ProductionLine,
     REPORT_STATUSES,
@@ -23,6 +24,7 @@ from .models import (
     ReportComment,
     USER_ROLES,
     User,
+    WorkOrder,
     report_consolidation_links,
     report_parameter_links,
 )
@@ -239,6 +241,15 @@ def reports():
         else:
             others.append(report)
 
+    if current_user.is_supervisor:
+        ots_unassigned = WorkOrder.query.filter_by(assigned_to_id=None).order_by(WorkOrder.created_at.desc()).all()
+        ots_assigned = WorkOrder.query.filter(WorkOrder.assigned_to_id.isnot(None)).order_by(WorkOrder.updated_at.desc()).all()
+        assignable_users = User.query.order_by(User.full_name).all()
+    else:
+        ots_unassigned = []
+        ots_assigned = WorkOrder.query.filter_by(assigned_to_id=current_user.id).order_by(WorkOrder.updated_at.desc()).all()
+        assignable_users = []
+
     factories = Factory.query.order_by(Factory.name).all()
     categories = Category.query.order_by(Category.name).all()
     users = User.query.order_by(User.full_name).all() if current_user.can_review_reports else []
@@ -256,6 +267,9 @@ def reports():
         machine_filter=machine_filter,
         category_filter=category_filter,
         user_filter=user_filter,
+        ots_unassigned=ots_unassigned,
+        ots_assigned=ots_assigned,
+        assignable_users=assignable_users,
     )
 
 
@@ -1209,3 +1223,71 @@ def delete_user(user_id):
         db.session.commit()
         flash("Usuario eliminado.", "success")
     return redirect(url_for("manage_users"))
+
+
+# ── Work Orders ────────────────────────────────────────────────────────────
+
+@login_required
+def work_order_create():
+    if not current_user.is_supervisor:
+        flash("Solo supervisores pueden crear ordenes de trabajo.", "error")
+        return redirect(url_for("reports"))
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        if not title:
+            flash("El titulo es obligatorio.", "error")
+            return render_template("work_order_form.html")
+        ot = WorkOrder(title=title, description=description or None, created_by_id=current_user.id)
+        db.session.add(ot)
+        db.session.commit()
+        flash("Orden de trabajo creada.", "success")
+        return redirect(url_for("reports"))
+
+    return render_template("work_order_form.html")
+
+
+@login_required
+def work_order_assign(ot_id):
+    if not current_user.is_supervisor:
+        flash("Solo supervisores pueden asignar ordenes de trabajo.", "error")
+        return redirect(url_for("reports"))
+
+    ot = WorkOrder.query.get_or_404(ot_id)
+    user_id = request.form.get("user_id", type=int)
+    user = User.query.get_or_404(user_id)
+
+    ot.assigned_to_id = user.id
+    notif = Notification(
+        user_id=user.id,
+        message=f"Se te asigno la orden de trabajo: {ot.title}",
+        work_order_id=ot.id,
+    )
+    db.session.add(notif)
+    db.session.commit()
+    flash(f"OT asignada a {user.full_name}.", "success")
+    return redirect(url_for("reports"))
+
+
+# ── Notifications ──────────────────────────────────────────────────────────
+
+@login_required
+def notifications_list():
+    notifs = (
+        Notification.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Notification.created_at.desc())
+        .all()
+    )
+    for n in notifs:
+        n.is_read = True
+    db.session.commit()
+    return render_template("notifications.html", notifications=notifs)
+
+
+@login_required
+def notifications_count():
+    from flask import jsonify
+    count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+    return jsonify({"count": count})

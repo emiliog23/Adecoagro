@@ -44,6 +44,24 @@ class User(UserMixin, db.Model):
         cascade="all, delete-orphan",
         lazy=True,
     )
+    work_orders_created = db.relationship(
+        "WorkOrder",
+        foreign_keys="WorkOrder.created_by_id",
+        back_populates="created_by",
+        lazy=True,
+    )
+    work_orders_assigned = db.relationship(
+        "WorkOrder",
+        foreign_keys="WorkOrder.assigned_to_id",
+        back_populates="assigned_to",
+        lazy=True,
+    )
+    notifications = db.relationship(
+        "Notification",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy=True,
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method="pbkdf2:sha256")
@@ -228,6 +246,34 @@ class MachineParameterReading(db.Model):
 
     parameter = db.relationship("MachineParameter", back_populates="readings")
     created_by = db.relationship("User")
+
+
+class WorkOrder(db.Model):
+    __tablename__ = "work_order"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    created_by = db.relationship("User", foreign_keys=[created_by_id], back_populates="work_orders_created")
+    assigned_to = db.relationship("User", foreign_keys=[assigned_to_id], back_populates="work_orders_assigned")
+    notifications = db.relationship("Notification", back_populates="work_order", cascade="all, delete-orphan", lazy=True)
+
+
+class Notification(db.Model):
+    __tablename__ = "notification"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    message = db.Column(db.String(300), nullable=False)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    work_order_id = db.Column(db.Integer, db.ForeignKey("work_order.id"), nullable=True)
+
+    user = db.relationship("User", back_populates="notifications")
+    work_order = db.relationship("WorkOrder", back_populates="notifications")
 
 
 @login_manager.user_loader

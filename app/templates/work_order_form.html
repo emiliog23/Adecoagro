@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Nueva OT | adecoagro{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h2>Nueva orden de trabajo</h2>
+    <p class="muted">Solo supervisores pueden crear y asignar ordenes de trabajo.</p>
+  </div>
+</section>
+
+<div class="narrow">
+  <div class="card">
+    <form method="post" class="form-grid">
+      <label>Titulo <span style="color:var(--danger)">*</span>
+        <input type="text" name="title" required maxlength="150" autofocus>
+      </label>
+      <label>Descripcion
+        <textarea name="description" rows="4" placeholder="Detalle de la tarea (opcional)"></textarea>
+      </label>
+      <div class="action-row">
+        <button type="submit">Crear OT</button>
+        <a class="button-link secondary" href="{{ url_for('reports') }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -658,7 +658,7 @@ td input[form] {
 /* ── Sidebar ─────────────────────────────────────────────────── */
 
 .sidebar {
-  width: 230px;
+  width: 220px;
   flex-shrink: 0;
   position: sticky;
   top: 72px;
@@ -666,15 +666,15 @@ td input[form] {
   overflow-y: auto;
   border-right: 1px solid var(--border);
   background: rgba(255, 253, 248, 0.97);
-  padding: 1.1rem 0.9rem 2rem;
+  padding: 1rem 0.8rem 2rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .sidebar-section-label {
-  margin: 0.6rem 0 0.25rem 0.4rem;
-  font-size: 0.7rem;
+  margin: 0.55rem 0 0.2rem 0.3rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1rem;
@@ -690,43 +690,43 @@ td input[form] {
 .folder-tree {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.08rem;
 }
 
 .ftree-item {
   display: block;
-  padding: 0.32rem 0.6rem;
-  border-radius: 7px;
-  font-size: 0.85rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.83rem;
   color: var(--text);
   text-decoration: none;
-  line-height: 1.35;
-  transition: background 0.12s, color 0.12s;
+  line-height: 1.3;
+  transition: background 0.1s, color 0.1s;
 }
 
 .ftree-item:hover {
-  background: rgba(47, 107, 79, 0.09);
+  background: rgba(47, 107, 79, 0.08);
   color: var(--accent-dark);
 }
 
 .ftree-item.active {
-  background: rgba(47, 107, 79, 0.14);
+  background: rgba(47, 107, 79, 0.13);
   color: var(--accent-dark);
   font-weight: 700;
 }
 
 .ftree-root {
   font-weight: 600;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .ftree-factory-block {
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
 }
 
 .ftree-factory {
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 
@@ -735,23 +735,23 @@ td input[form] {
 }
 
 .ftree-line-block {
-  padding-left: 0.75rem;
+  padding-left: 0.65rem;
   border-left: 2px solid var(--border);
-  margin-left: 0.7rem;
-  margin-top: 0.1rem;
+  margin-left: 0.6rem;
+  margin-top: 0.08rem;
   display: flex;
   flex-direction: column;
-  gap: 0.05rem;
+  gap: 0.04rem;
 }
 
 .ftree-line {
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 600;
 }
 
 .ftree-machine {
-  font-size: 0.8rem;
-  padding-left: 0.9rem;
+  font-size: 0.78rem;
+  padding-left: 0.8rem;
   color: var(--muted);
 }
 
@@ -765,50 +765,63 @@ td input[form] {
 .sidebar-form {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  margin-top: 0.2rem;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
 }
 
 .sidebar-label {
   display: grid;
-  gap: 0.3rem;
-  font-size: 0.82rem;
+  gap: 0.25rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
 .sidebar-label select {
-  padding: 0.5rem 0.7rem;
-  font-size: 0.82rem;
-  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.8rem;
+  border-radius: 7px;
 }
 
 .sidebar-btn {
-  padding: 0.5rem 0.7rem;
-  font-size: 0.82rem;
-  border-radius: 8px;
-  margin-top: 0.1rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.8rem;
+  border-radius: 7px;
+  margin-top: 0.05rem;
 }
 
 .sidebar-actions {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
   border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .sidebar-create-btn {
   display: block;
   text-align: center;
-  padding: 0.5rem 0.7rem;
-  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  border-radius: 7px;
   border: 1px solid var(--accent);
   color: var(--accent-dark);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   transition: background 0.12s, color 0.12s;
 }
 
 .sidebar-create-btn:hover {
   background: var(--accent);
+  color: #fff;
+}
+
+.ot-create-btn {
+  border-color: #a16207;
+  color: #a16207;
+}
+
+.ot-create-btn:hover {
+  background: #a16207;
   color: #fff;
 }
 
@@ -822,63 +835,72 @@ td input[form] {
 }
 
 .board-head {
-  padding: 1.4rem 1.5rem 0.75rem;
+  padding: 1.2rem 1.4rem 0.6rem;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba(215, 200, 178, 0.4);
 }
 
 .board-head h2 {
-  margin: 0 0 0.2rem;
+  margin: 0 0 0.15rem;
+  font-size: 1.1rem;
 }
 
 .board-subtitle {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .board-scroll {
   overflow-x: auto;
-  padding: 0.5rem 1.5rem 2.5rem;
+  padding: 1rem 1.2rem 2rem;
   flex: 1;
 }
 
-/* ── Kanban board ─────────────────────────────────────────────── */
+/* ── Kanban board — unified, no gaps ─────────────────────────── */
 
 .kanban-board {
-  display: flex;
-  gap: 0.75rem;
+  display: inline-flex;   /* shrink-to-content so scroll works */
+  gap: 0;
   align-items: flex-start;
-  min-height: 200px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(46, 42, 36, 0.07);
+  min-height: 220px;
 }
 
 .kanban-col {
-  width: 230px;
+  width: 195px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  overflow: hidden;
-  background: #f9f6f0;
+  border-right: 1px solid var(--border);
+  background: #f8f5ef;
+}
+
+.kanban-col:last-child {
+  border-right: 0;
 }
 
 .col-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 0.75rem;
-  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  gap: 0.4rem;
+  border-bottom: 1px solid rgba(215, 200, 178, 0.4);
 }
 
 .col-title {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   line-height: 1.3;
 }
 
 .col-count {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 0.15rem 0.45rem;
+  padding: 0.1rem 0.38rem;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
@@ -887,61 +909,91 @@ td input[form] {
 .col-body {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.5rem;
-  min-height: 80px;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  flex: 1;
 }
 
 .col-empty {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: var(--muted);
   text-align: center;
-  padding: 1rem 0.5rem;
+  padding: 1rem 0.4rem;
+  opacity: 0.7;
 }
 
-/* Status column colors */
+/* ── Status column header colors ─────────────────────────────── */
 
-.kanban-col[data-status="Nuevo"] .col-head             { background: #dbeafe; color: #1e40af; }
-.kanban-col[data-status="Leido"] .col-head             { background: #ede9fe; color: #5b21b6; }
-.kanban-col[data-status="En espera"] .col-head         { background: #fef3c7; color: #92400e; }
-.kanban-col[data-status="Abierto por el mecanico"] .col-head { background: #e0f2fe; color: #0369a1; }
-.kanban-col[data-status="Imposible de terminar"] .col-head   { background: #fee2e2; color: #991b1b; }
-.kanban-col[data-status="Terminado con problemas"] .col-head { background: #ffedd5; color: #9a3412; }
-.kanban-col[data-status="Terminado normal"] .col-head  { background: #d1fae5; color: #065f46; }
-.kanban-col[data-status="otros"] .col-head             { background: #f3f4f6; color: #374151; }
+.kanban-col[data-status="Nuevo"] .col-head                    { background: #dbeafe; color: #1e40af; }
+.kanban-col[data-status="Leido"] .col-head                    { background: #ede9fe; color: #5b21b6; }
+.kanban-col[data-status="En espera"] .col-head                { background: #fef3c7; color: #92400e; }
+.kanban-col[data-status="Abierto por el mecanico"] .col-head  { background: #e0f2fe; color: #0369a1; }
+.kanban-col[data-status="Imposible de terminar"] .col-head    { background: #fee2e2; color: #991b1b; }
+.kanban-col[data-status="Terminado con problemas"] .col-head  { background: #ffedd5; color: #9a3412; }
+.kanban-col[data-status="Terminado normal"] .col-head         { background: #d1fae5; color: #065f46; }
+.kanban-col[data-status="otros"] .col-head                    { background: #f3f4f6; color: #374151; }
+.kanban-col[data-status="OT sin asignar"] .col-head           { background: #fef9c3; color: #713f12; }
+.kanban-col[data-status="OT asignadas"] .col-head             { background: #dcfce7; color: #14532d; }
+
+/* Divider between reports and OTs */
+
+.kanban-divider {
+  width: 3px;
+  flex-shrink: 0;
+  background: var(--accent);
+  opacity: 0.5;
+  align-self: stretch;
+}
+
+/* OT columns subtle background */
+
+.kanban-col-ot {
+  background: #f5f2ea;
+}
 
 /* ── Kanban cards ─────────────────────────────────────────────── */
 
 .kanban-card {
   display: block;
-  background: var(--panel);
-  border: 1px solid rgba(215, 200, 178, 0.7);
-  border-radius: 9px;
-  padding: 0.65rem 0.7rem;
+  background: #fffdf8;
+  border: 1px solid rgba(215, 200, 178, 0.55);
+  border-radius: 7px;
+  padding: 0.55rem 0.6rem;
   text-decoration: none;
   color: var(--text);
-  transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
+  cursor: pointer;
+  transition: border-color 0.1s, box-shadow 0.1s;
 }
 
 .kanban-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 3px 10px rgba(47, 107, 79, 0.13);
-  transform: translateY(-1px);
+  box-shadow: 0 1px 5px rgba(47, 107, 79, 0.1);
 }
 
 .kcard-id {
-  font-size: 0.7rem;
+  font-size: 0.67rem;
   color: var(--muted);
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.25rem;
 }
 
 .kcard-title {
-  font-size: 0.84rem;
+  font-size: 0.81rem;
   font-weight: 600;
-  line-height: 1.35;
-  margin-bottom: 0.55rem;
+  line-height: 1.3;
+  margin-bottom: 0.4rem;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.kcard-desc {
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.3;
+  margin-bottom: 0.35rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -949,23 +1001,146 @@ td input[form] {
 .kcard-footer {
   display: flex;
   flex-direction: column;
-  gap: 0.18rem;
+  gap: 0.12rem;
 }
 
 .kcard-machine,
 .kcard-user {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--muted);
 }
 
-.kcard-machine::before {
-  content: "Maq: ";
-  font-weight: 600;
+.kcard-machine::before { content: "Maq: "; font-weight: 600; }
+.kcard-user::before    { content: ""; }
+
+.ot-card {
+  cursor: context-menu;
 }
 
-.kcard-user::before {
-  content: "Por: ";
+.ot-assigned {
+  border-left: 3px solid #16a34a;
+}
+
+/* ── Context menu ─────────────────────────────────────────────── */
+
+.context-menu {
+  position: absolute;
+  z-index: 1000;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(46, 42, 36, 0.15);
+  padding: 0.4rem 0;
+  min-width: 180px;
+}
+
+.context-menu-title {
+  padding: 0.35rem 0.75rem 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07rem;
+  color: var(--muted);
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  background: none;
+  border: none;
+  border-radius: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.context-menu-item:hover {
+  background: rgba(47, 107, 79, 0.09);
+  color: var(--accent-dark);
+}
+
+/* ── Notifications ────────────────────────────────────────────── */
+
+.nav-notif {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.notif-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.has-notif {
+  color: #dc2626 !important;
+  font-weight: 700;
+}
+
+.notif-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  background: var(--accent-dark);
+  color: #fff;
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
   font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.22s, transform 0.22s;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.notif-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.notif-card {
+  margin-bottom: 0;
+}
+
+.notif-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.notif-msg {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.notif-time {
+  font-size: 0.78rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.notif-sub {
+  margin: 0.3rem 0 0;
+  font-size: 0.82rem;
 }
 
 @media (max-width: 760px) {

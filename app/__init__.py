@@ -77,6 +77,19 @@ def create_app():
     app.add_url_rule("/admin/usuarios", view_func=routes.manage_users, methods=["GET", "POST"])
     app.add_url_rule("/admin/usuarios/<int:user_id>/editar", view_func=routes.edit_user, methods=["POST"])
     app.add_url_rule("/admin/usuarios/<int:user_id>/eliminar", view_func=routes.delete_user, methods=["POST"])
+    app.add_url_rule("/ordenes-trabajo/nueva", view_func=routes.work_order_create, methods=["GET", "POST"])
+    app.add_url_rule("/ordenes-trabajo/<int:ot_id>/asignar", view_func=routes.work_order_assign, methods=["POST"])
+    app.add_url_rule("/notificaciones", view_func=routes.notifications_list)
+    app.add_url_rule("/notificaciones/cuenta", view_func=routes.notifications_count)
+
+    @app.context_processor
+    def inject_notification_count():
+        from flask_login import current_user
+        from .models import Notification
+        if current_user.is_authenticated:
+            count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+            return {"unread_notifications": count}
+        return {"unread_notifications": 0}
 
     with app.app_context():
         from .models import ensure_schema, seed_data

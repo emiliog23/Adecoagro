@@ -5,13 +5,12 @@
 
 <div class="reports-layout">
 
-  {# ── Sidebar ───────────────────────────────────────────────────── #}
+  {# ── Sidebar ───────────────────────────────────────────────── #}
   <aside class="sidebar">
 
     <p class="sidebar-section-label">Ubicacion</p>
 
     <nav class="folder-tree">
-      {# Root: all locations #}
       <a href="?{% if category_filter %}category_id={{ category_filter }}&{% endif %}{% if user_filter %}user_id={{ user_filter }}{% endif %}"
          class="ftree-item ftree-root {% if not factory_filter and not line_filter and not machine_filter %}active{% endif %}">
         Todas las maquinas
@@ -23,14 +22,12 @@
            class="ftree-item ftree-factory {% if factory_filter == factory.id and not line_filter and not machine_filter %}active{% endif %}">
           {{ factory.name }}
         </a>
-
         {% for line in factory.lines %}
         <div class="ftree-line-block">
           <a href="?line_id={{ line.id }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if user_filter %}&user_id={{ user_filter }}{% endif %}"
              class="ftree-item ftree-line {% if line_filter == line.id and not machine_filter %}active{% endif %}">
             {{ line.name }}
           </a>
-
           {% for machine in line.machines %}
           <a href="?machine_id={{ machine.id }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if user_filter %}&user_id={{ user_filter }}{% endif %}"
              class="ftree-item ftree-machine {% if machine_filter == machine.id %}active{% endif %}">
@@ -76,11 +73,14 @@
 
     <div class="sidebar-actions">
       <a class="sidebar-create-btn" href="{{ url_for('report_create') }}">+ Nuevo reporte</a>
+      {% if current_user.is_supervisor %}
+      <a class="sidebar-create-btn ot-create-btn" href="{{ url_for('work_order_create') }}">+ Nueva OT</a>
+      {% endif %}
     </div>
 
   </aside>
 
-  {# ── Board area ────────────────────────────────────────────────── #}
+  {# ── Board ─────────────────────────────────────────────────── #}
   <div class="board-area">
 
     <div class="board-head">
@@ -88,24 +88,16 @@
         <h2>Reportes de problemas</h2>
         <p class="muted board-subtitle">
           {% if machine_filter %}
-            {%- for factory in factories -%}
-              {%- for line in factory.lines -%}
-                {%- for machine in line.machines -%}
-                  {%- if machine.id == machine_filter -%}{{ factory.name }} / {{ line.name }} / {{ machine.name }}{%- endif -%}
-                {%- endfor -%}
-              {%- endfor -%}
-            {%- endfor -%}
+            {%- for factory in factories -%}{%- for line in factory.lines -%}{%- for machine in line.machines -%}
+              {%- if machine.id == machine_filter -%}{{ factory.name }} / {{ line.name }} / {{ machine.name }}{%- endif -%}
+            {%- endfor -%}{%- endfor -%}{%- endfor -%}
           {% elif line_filter %}
-            {%- for factory in factories -%}
-              {%- for line in factory.lines -%}
-                {%- if line.id == line_filter -%}{{ factory.name }} / {{ line.name }}{%- endif -%}
-              {%- endfor -%}
-            {%- endfor -%}
+            {%- for factory in factories -%}{%- for line in factory.lines -%}
+              {%- if line.id == line_filter -%}{{ factory.name }} / {{ line.name }}{%- endif -%}
+            {%- endfor -%}{%- endfor -%}
           {% elif factory_filter %}
             {%- for factory in factories -%}{%- if factory.id == factory_filter -%}{{ factory.name }}{%- endif -%}{%- endfor -%}
-          {% else %}
-            Todas las ubicaciones
-          {% endif %}
+          {% else %}Todas las ubicaciones{% endif %}
         </p>
       </div>
     </div>
@@ -113,6 +105,7 @@
     <div class="board-scroll">
       <section class="kanban-board">
 
+        {# Report columns #}
         {% for status in statuses %}
         {% set col_reports = reports_by_status[status] %}
         <div class="kanban-col" data-status="{{ status }}">
@@ -146,7 +139,7 @@
           <div class="col-body">
             {% for report in others %}
             <a href="{{ url_for('report_detail', report_id=report.id) }}" class="kanban-card">
-              <div class="kcard-id">#{{ report.id }} &middot; {{ report.status }}</div>
+              <div class="kcard-id">#{{ report.id }} · {{ report.status }}</div>
               <div class="kcard-title">{{ report.title }}</div>
               <div class="kcard-footer">
                 <span class="kcard-machine">{{ report.machine.name }}</span>
@@ -158,9 +151,112 @@
         </div>
         {% endif %}
 
+        {# Divider between reports and OT #}
+        <div class="kanban-divider"></div>
+
+        {# OT columns #}
+        <div class="kanban-col kanban-col-ot" data-status="OT sin asignar">
+          <div class="col-head">
+            <span class="col-title">OT sin asignar</span>
+            <span class="col-count">{{ ots_unassigned | length }}</span>
+          </div>
+          <div class="col-body">
+            {% for ot in ots_unassigned %}
+            <div class="kanban-card ot-card"
+                 data-ot-id="{{ ot.id }}"
+                 title="Clic derecho para asignar">
+              <div class="kcard-id">OT #{{ ot.id }}</div>
+              <div class="kcard-title">{{ ot.title }}</div>
+              {% if ot.description %}
+              <div class="kcard-desc">{{ ot.description[:80] }}{% if ot.description | length > 80 %}...{% endif %}</div>
+              {% endif %}
+              <div class="kcard-footer">
+                <span class="kcard-user">Por: {{ ot.created_by.full_name }}</span>
+              </div>
+            </div>
+            {% else %}
+            <div class="col-empty">Sin OT pendientes</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="kanban-col kanban-col-ot" data-status="OT asignadas">
+          <div class="col-head">
+            <span class="col-title">OT asignadas</span>
+            <span class="col-count">{{ ots_assigned | length }}</span>
+          </div>
+          <div class="col-body">
+            {% for ot in ots_assigned %}
+            <div class="kanban-card ot-card ot-assigned">
+              <div class="kcard-id">OT #{{ ot.id }}</div>
+              <div class="kcard-title">{{ ot.title }}</div>
+              {% if ot.description %}
+              <div class="kcard-desc">{{ ot.description[:80] }}{% if ot.description | length > 80 %}...{% endif %}</div>
+              {% endif %}
+              <div class="kcard-footer">
+                <span class="kcard-user">Para: {{ ot.assigned_to.full_name }}</span>
+              </div>
+            </div>
+            {% else %}
+            <div class="col-empty">Sin OT asignadas</div>
+            {% endfor %}
+          </div>
+        </div>
+
       </section>
     </div>
   </div>
-
 </div>
+
+{# ── Right-click context menu (supervisor only) ────────────────── #}
+{% if current_user.is_supervisor and assignable_users %}
+<div id="ot-context-menu" class="context-menu" style="display:none">
+  <div class="context-menu-title">Asignar a:</div>
+  {% for user in assignable_users %}
+  <button class="context-menu-item" data-user-id="{{ user.id }}">{{ user.full_name }}</button>
+  {% endfor %}
+</div>
+
+<script>
+(function () {
+  var menu = document.getElementById("ot-context-menu");
+  var currentOtId = null;
+
+  document.querySelectorAll(".ot-card[data-ot-id]").forEach(function (card) {
+    card.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+      currentOtId = card.dataset.otId;
+      menu.style.display = "block";
+      var x = Math.min(e.pageX, window.innerWidth - menu.offsetWidth - 8);
+      var y = Math.min(e.pageY, window.pageYOffset + window.innerHeight - menu.offsetHeight - 8);
+      menu.style.left = x + "px";
+      menu.style.top  = y + "px";
+    });
+  });
+
+  document.addEventListener("click", function () {
+    menu.style.display = "none";
+    currentOtId = null;
+  });
+
+  document.querySelectorAll(".context-menu-item").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!currentOtId) return;
+      var form = document.createElement("form");
+      form.method = "POST";
+      form.action = "/ordenes-trabajo/" + currentOtId + "/asignar";
+      var input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "user_id";
+      input.value = btn.dataset.userId;
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    });
+  });
+})();
+</script>
+{% endif %}
+
 {% endblock %}

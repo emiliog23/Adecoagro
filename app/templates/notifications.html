@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Alertas | adecoagro{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h2>Alertas</h2>
+    <p class="muted">Ordenes de trabajo y avisos asignados a tu usuario.</p>
+  </div>
+</section>
+
+{% if notifications %}
+<div class="stack-list">
+  {% for notif in notifications %}
+  <div class="card notif-card {% if not notif.is_read %}notif-unread{% endif %}">
+    <div class="notif-row">
+      <p class="notif-msg">{{ notif.message }}</p>
+      <span class="muted notif-time">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+    </div>
+    {% if notif.work_order %}
+    <p class="notif-sub muted">OT #{{ notif.work_order.id }} &mdash; {{ notif.work_order.title }}</p>
+    {% if notif.work_order.description %}
+    <p class="notif-sub muted">{{ notif.work_order.description }}</p>
+    {% endif %}
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <p>No hay alertas para tu usuario.</p>
+</div>
+{% endif %}
+{% endblock %}

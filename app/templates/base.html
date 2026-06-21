@@ -36,6 +36,14 @@
           {% if current_user.can_manage_admin %}
           <a href="{{ url_for('admin_dashboard') }}">Administracion</a>
           {% endif %}
+          <a href="{{ url_for('notifications_list') }}"
+             id="notif-nav-link"
+             class="nav-notif {% if unread_notifications > 0 %}has-notif{% endif %}">
+            Alertas
+            <span id="notif-badge-count"
+                  class="notif-badge"
+                  {% if unread_notifications == 0 %}style="display:none"{% endif %}>{{ unread_notifications }}</span>
+          </a>
         </nav>
       </div>
       {% endif %}
@@ -53,5 +61,39 @@
       {% endwith %}
       {% block content %}{% endblock %}
     </main>
+  {% if current_user.is_authenticated %}
+  <script>
+  (function poll() {
+    setTimeout(function () {
+      fetch("{{ url_for('notifications_count') }}")
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var badge = document.getElementById("notif-badge-count");
+          var link  = document.getElementById("notif-nav-link");
+          if (!badge || !link) return;
+          var prev = parseInt(badge.textContent) || 0;
+          badge.textContent = data.count;
+          badge.style.display = data.count > 0 ? "" : "none";
+          link.classList.toggle("has-notif", data.count > 0);
+          if (data.count > prev) showNotifToast("Tiene " + data.count + " alerta(s) nueva(s)");
+        })
+        .catch(function () {});
+      poll();
+    }, 30000);
+  })();
+
+  function showNotifToast(msg) {
+    var t = document.createElement("div");
+    t.className = "notif-toast";
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.classList.add("show"); }, 10);
+    setTimeout(function () {
+      t.classList.remove("show");
+      setTimeout(function () { t.remove(); }, 300);
+    }, 4500);
+  }
+  </script>
+  {% endif %}
   </body>
 </html>
