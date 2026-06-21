@@ -996,10 +996,8 @@ td input[form] {
   background: #f5f0fb;
 }
 
-.col-head-closing {
-  background: #ede9fe;
-  color: #5b21b6;
-}
+.kanban-col[data-closing-status="Nuevo"] .col-head          { background: #ede9fe; color: #5b21b6; }
+.kanban-col[data-closing-status="Cierre comentado"] .col-head { background: #d1fae5; color: #065f46; }
 
 .closing-card {
   border-left: 3px solid #8b5cf6;
