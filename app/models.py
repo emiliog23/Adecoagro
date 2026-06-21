@@ -9,11 +9,6 @@ REPORT_STATUSES = [
     "Nuevo",
     "Leido por el supervisor",
     "Reporte observado",
-    "En espera",
-    "Abierto por el mecanico",
-    "Imposible de terminar",
-    "Terminado con problemas",
-    "Terminado normal",
 ]
 
 WORK_ORDER_STATUSES = [
