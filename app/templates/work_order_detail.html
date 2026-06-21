@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}OT #{{ ot.id }} | adecoagro{% endblock %}
+{% block content %}
+
+<section class="card">
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">Orden de trabajo #{{ ot.id }}</p>
+      <h2>{{ ot.title }}</h2>
+      <p class="muted">
+        Creada {{ ot.created_at.strftime('%d/%m/%Y %H:%M') }} por {{ ot.created_by.full_name }}
+      </p>
+    </div>
+    <span class="status-badge large">{{ ot.status }}</span>
+  </div>
+  {% if ot.description %}
+  <p>{{ ot.description }}</p>
+  {% endif %}
+  <ul class="meta-list">
+    <li><strong>Asignada a:</strong>
+      {% if ot.assigned_to %}{{ ot.assigned_to.full_name }}{% else %}<em class="muted">Sin asignar</em>{% endif %}
+    </li>
+  </ul>
+</section>
+
+{# ── Asignar / reasignar (supervisor) ─────────────────────────────────── #}
+{% if current_user.is_supervisor %}
+<section class="card">
+  <h3>Asignacion</h3>
+  <form method="post" action="{{ url_for('work_order_assign', ot_id=ot.id) }}" class="inline-form">
+    <select name="user_id">
+      <option value="">-- elegir usuario --</option>
+      {% for user in assignable_users %}
+      <option value="{{ user.id }}" {% if ot.assigned_to_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">{% if ot.assigned_to %}Reasignar{% else %}Asignar{% endif %}</button>
+  </form>
+</section>
+{% endif %}
+
+{# ── Cambiar estado ────────────────────────────────────────────────────── #}
+<section class="card">
+  <h3>Estado</h3>
+  <form method="post" action="{{ url_for('work_order_status_update', ot_id=ot.id) }}" class="inline-form">
+    <select name="status">
+      {% for s in all_statuses %}
+      <option value="{{ s }}"
+              {% if ot.status == s %}selected{% endif %}
+              {% if s not in allowed_statuses %}disabled{% endif %}>
+        {{ s }}{% if s not in allowed_statuses %} (solo supervisor){% endif %}
+      </option>
+      {% endfor %}
+    </select>
+    <button type="submit">Actualizar estado</button>
+  </form>
+  {% if not current_user.is_supervisor %}
+  <p class="muted" style="margin-top:0.5rem;font-size:0.82rem">
+    Puedes reportar: En progreso, Terminada, Terminada con problemas, Imposible de terminar.
+  </p>
+  {% endif %}
+</section>
+
+{# ── Comentarios ──────────────────────────────────────────────────────── #}
+<section class="card">
+  <h3>Comentarios</h3>
+  <form method="post" class="form-grid">
+    <label>Nuevo comentario
+      <textarea name="comment" rows="3" placeholder="Agregar observacion o actualizacion"></textarea>
+    </label>
+    <button type="submit">Guardar comentario</button>
+  </form>
+
+  {% if ot.comments %}
+  <div class="comment-list">
+    {% for comment in ot.comments | sort(attribute='created_at', reverse=True) %}
+    <article class="comment-card">
+      <p>{{ comment.content }}</p>
+      <p class="muted">{{ comment.created_by.full_name }} &middot; {{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">Sin comentarios aun.</p>
+  {% endif %}
+</section>
+
+{% endblock %}

@@ -157,54 +157,37 @@
         {# ── Divider ───────────────────────────────────────── #}
         <div class="kanban-divider"></div>
 
-        {# ── OT columns ────────────────────────────────────── #}
-        <div class="kanban-col kanban-col-ot" data-status="OT sin asignar">
+        {# ── OT columns — one per status ───────────────────── #}
+        {% for ot_status in ot_statuses %}
+        {% set col_ots = ots_by_status[ot_status] %}
+        <div class="kanban-col kanban-col-ot" data-ot-status="{{ ot_status }}">
           <div class="col-head">
-            <span class="col-title">OT sin asignar</span>
-            <span class="col-count">{{ ots_unassigned | length }}</span>
+            <span class="col-title">{{ ot_status }}</span>
+            <span class="col-count">{{ col_ots | length }}</span>
           </div>
           <div class="col-body">
-            {% for ot in ots_unassigned %}
-            <div class="kanban-card ot-card"
-                 data-ot-id="{{ ot.id }}"
-                 title="Clic derecho para asignar">
+            {% for ot in col_ots %}
+            <a href="{{ url_for('work_order_detail', ot_id=ot.id) }}"
+               class="kanban-card ot-card"
+               {% if ot_status == "Nueva" and current_user.is_supervisor %}data-ot-id="{{ ot.id }}" title="Clic derecho para asignar"{% endif %}>
               <div class="kcard-top"><span class="kcard-id">OT #{{ ot.id }}</span></div>
               <div class="kcard-title">{{ ot.title }}</div>
               {% if ot.description %}
               <div class="kcard-desc">{{ ot.description[:80] }}{% if ot.description | length > 80 %}...{% endif %}</div>
               {% endif %}
               <div class="kcard-footer">
-                <span class="kcard-user">{{ ot.created_by.full_name }}</span>
+                <span class="kcard-user">
+                  {%- if ot.assigned_to -%}Para: {{ ot.assigned_to.full_name }}
+                  {%- else -%}{{ ot.created_by.full_name }}{%- endif -%}
+                </span>
               </div>
-            </div>
+            </a>
             {% else %}
-            <div class="col-empty">Sin OT pendientes</div>
+            <div class="col-empty">Sin OT</div>
             {% endfor %}
           </div>
         </div>
-
-        <div class="kanban-col kanban-col-ot" data-status="OT asignadas">
-          <div class="col-head">
-            <span class="col-title">OT asignadas</span>
-            <span class="col-count">{{ ots_assigned | length }}</span>
-          </div>
-          <div class="col-body">
-            {% for ot in ots_assigned %}
-            <div class="kanban-card ot-card ot-assigned">
-              <div class="kcard-top"><span class="kcard-id">OT #{{ ot.id }}</span></div>
-              <div class="kcard-title">{{ ot.title }}</div>
-              {% if ot.description %}
-              <div class="kcard-desc">{{ ot.description[:80] }}{% if ot.description | length > 80 %}...{% endif %}</div>
-              {% endif %}
-              <div class="kcard-footer">
-                <span class="kcard-user">Para: {{ ot.assigned_to.full_name }}</span>
-              </div>
-            </div>
-            {% else %}
-            <div class="col-empty">Sin OT asignadas</div>
-            {% endfor %}
-          </div>
-        </div>
+        {% endfor %}
 
       </section>
     </div>

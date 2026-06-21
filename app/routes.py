@@ -24,7 +24,10 @@ from .models import (
     ReportComment,
     USER_ROLES,
     User,
+    WORK_ORDER_STATUSES,
+    WORK_ORDER_USER_STATUSES,
     WorkOrder,
+    WorkOrderComment,
     report_consolidation_links,
     report_parameter_links,
 )
@@ -242,13 +245,16 @@ def reports():
             others.append(report)
 
     if current_user.is_supervisor:
-        ots_unassigned = WorkOrder.query.filter_by(assigned_to_id=None).order_by(WorkOrder.created_at.desc()).all()
-        ots_assigned = WorkOrder.query.filter(WorkOrder.assigned_to_id.isnot(None)).order_by(WorkOrder.updated_at.desc()).all()
+        all_ots = WorkOrder.query.order_by(WorkOrder.created_at.desc()).all()
         assignable_users = User.query.order_by(User.full_name).all()
     else:
-        ots_unassigned = []
-        ots_assigned = WorkOrder.query.filter_by(assigned_to_id=current_user.id).order_by(WorkOrder.updated_at.desc()).all()
+        all_ots = WorkOrder.query.filter_by(assigned_to_id=current_user.id).order_by(WorkOrder.updated_at.desc()).all()
         assignable_users = []
+    ots_by_status = {s: [] for s in WORK_ORDER_STATUSES}
+    for ot in all_ots:
+        bucket = ots_by_status.get(ot.status)
+        if bucket is not None:
+            bucket.append(ot)
 
     factories = Factory.query.order_by(Factory.name).all()
     categories = Category.query.order_by(Category.name).all()
@@ -267,8 +273,8 @@ def reports():
         machine_filter=machine_filter,
         category_filter=category_filter,
         user_filter=user_filter,
-        ots_unassigned=ots_unassigned,
-        ots_assigned=ots_assigned,
+        ots_by_status=ots_by_status,
+        ot_statuses=WORK_ORDER_STATUSES,
         assignable_users=assignable_users,
     )
 
@@ -628,9 +634,17 @@ def report_detail(report_id):
         flash("No tienes acceso a este reporte.", "error")
         return redirect(url_for("reports"))
 
+    # Auto-transition: supervisor opens a new report → mark as read
+    if current_user.can_review_reports and report.status == "Nuevo":
+        report.status = "Leido por el supervisor"
+        db.session.commit()
+
     if request.method == "POST":
         comment = request.form.get("comment", "").strip()
         if current_user.can_review_reports and comment:
+            # Auto-transition: first comment on a read report → observed
+            if report.status == "Leido por el supervisor":
+                report.status = "Reporte observado"
             db.session.add(ReportComment(content=comment, report_id=report.id, created_by_id=current_user.id))
             db.session.commit()
             flash("Comentario agregado.", "success")
@@ -1259,6 +1273,7 @@ def work_order_assign(ot_id):
     user = User.query.get_or_404(user_id)
 
     ot.assigned_to_id = user.id
+    ot.status = "Asignada"
     db.session.add(Notification(
         user_id=user.id,
         message=f"Se te asigno la orden de trabajo: {ot.title}",
@@ -1290,3 +1305,65 @@ def notifications_count():
     from flask import jsonify
     count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
     return jsonify({"count": count})
+
+
+# ── Work Order detail & status ─────────────────────────────────────────────
+
+@login_required
+def work_order_detail(ot_id):
+    ot = WorkOrder.query.get_or_404(ot_id)
+    if not current_user.is_supervisor and ot.assigned_to_id != current_user.id:
+        flash("No tienes acceso a esta orden de trabajo.", "error")
+        return redirect(url_for("reports"))
+
+    if request.method == "POST":
+        comment = request.form.get("comment", "").strip()
+        if comment:
+            db.session.add(WorkOrderComment(content=comment, work_order_id=ot.id, created_by_id=current_user.id))
+            db.session.commit()
+            flash("Comentario agregado.", "success")
+        else:
+            flash("Escribe un comentario para guardarlo.", "error")
+        return redirect(url_for("work_order_detail", ot_id=ot.id))
+
+    allowed_statuses = WORK_ORDER_STATUSES if current_user.is_supervisor else sorted(WORK_ORDER_USER_STATUSES)
+    assignable_users = User.query.order_by(User.full_name).all() if current_user.is_supervisor else []
+
+    return render_template(
+        "work_order_detail.html",
+        ot=ot,
+        allowed_statuses=allowed_statuses,
+        all_statuses=WORK_ORDER_STATUSES,
+        assignable_users=assignable_users,
+    )
+
+
+@login_required
+def work_order_status_update(ot_id):
+    ot = WorkOrder.query.get_or_404(ot_id)
+    if not current_user.is_supervisor and ot.assigned_to_id != current_user.id:
+        flash("No tienes acceso a esta orden de trabajo.", "error")
+        return redirect(url_for("reports"))
+
+    new_status = request.form.get("status", "").strip()
+    if new_status not in WORK_ORDER_STATUSES:
+        flash("Estado invalido.", "error")
+        return redirect(url_for("work_order_detail", ot_id=ot.id))
+
+    if not current_user.is_supervisor and new_status not in WORK_ORDER_USER_STATUSES:
+        flash("No tienes permiso para ese estado.", "error")
+        return redirect(url_for("work_order_detail", ot_id=ot.id))
+
+    ot.status = new_status
+
+    # Notify assigned user when supervisor requests revision
+    if new_status == "Revision solicitada" and ot.assigned_to_id:
+        db.session.add(Notification(
+            user_id=ot.assigned_to_id,
+            message=f"El supervisor solicito revision de la OT: {ot.title}",
+            work_order_id=ot.id,
+        ))
+
+    db.session.commit()
+    flash("Estado actualizado.", "success")
+    return redirect(url_for("work_order_detail", ot_id=ot.id))

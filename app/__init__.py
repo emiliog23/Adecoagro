@@ -78,7 +78,9 @@ def create_app():
     app.add_url_rule("/admin/usuarios/<int:user_id>/editar", view_func=routes.edit_user, methods=["POST"])
     app.add_url_rule("/admin/usuarios/<int:user_id>/eliminar", view_func=routes.delete_user, methods=["POST"])
     app.add_url_rule("/ordenes-trabajo/nueva", view_func=routes.work_order_create, methods=["GET", "POST"])
+    app.add_url_rule("/ordenes-trabajo/<int:ot_id>", view_func=routes.work_order_detail, methods=["GET", "POST"])
     app.add_url_rule("/ordenes-trabajo/<int:ot_id>/asignar", view_func=routes.work_order_assign, methods=["POST"])
+    app.add_url_rule("/ordenes-trabajo/<int:ot_id>/estado", view_func=routes.work_order_status_update, methods=["POST"])
     app.add_url_rule("/notificaciones", view_func=routes.notifications_list)
     app.add_url_rule("/notificaciones/cuenta", view_func=routes.notifications_count)
 

@@ -7,13 +7,31 @@ from . import db, login_manager
 
 REPORT_STATUSES = [
     "Nuevo",
-    "Leido",
+    "Leido por el supervisor",
+    "Reporte observado",
     "En espera",
     "Abierto por el mecanico",
     "Imposible de terminar",
     "Terminado con problemas",
     "Terminado normal",
 ]
+
+WORK_ORDER_STATUSES = [
+    "Nueva",
+    "Asignada",
+    "En progreso",
+    "Revision solicitada",
+    "Terminada",
+    "Terminada con problemas",
+    "Imposible de terminar",
+]
+
+WORK_ORDER_USER_STATUSES = {
+    "En progreso",
+    "Terminada",
+    "Terminada con problemas",
+    "Imposible de terminar",
+}
 
 PARAMETER_REPORT_TYPES = [
     "Receta",
@@ -253,6 +271,7 @@ class WorkOrder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(40), nullable=False, default="Nueva")
     created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     assigned_to_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -261,6 +280,19 @@ class WorkOrder(db.Model):
     created_by = db.relationship("User", foreign_keys=[created_by_id], back_populates="work_orders_created")
     assigned_to = db.relationship("User", foreign_keys=[assigned_to_id], back_populates="work_orders_assigned")
     notifications = db.relationship("Notification", back_populates="work_order", cascade="all, delete-orphan", lazy=True)
+    comments = db.relationship("WorkOrderComment", back_populates="work_order", cascade="all, delete-orphan", lazy=True)
+
+
+class WorkOrderComment(db.Model):
+    __tablename__ = "work_order_comment"
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    work_order_id = db.Column(db.Integer, db.ForeignKey("work_order.id"), nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    work_order = db.relationship("WorkOrder", back_populates="comments")
+    created_by = db.relationship("User")
 
 
 class Notification(db.Model):
@@ -358,13 +390,15 @@ def ensure_schema():
     if "downtime_minutes" not in report_cols:
         migrations.append("ALTER TABLE report ADD COLUMN downtime_minutes INTEGER")
 
-    # Ensure notification table has work_order_id (may be missing on fresh db that was
-    # created under the short-lived report_id schema)
     tables = {r["name"] for r in db.session.execute(db.text("SELECT name FROM sqlite_master WHERE type='table'")).mappings()}
     if "notification" in tables:
         notif_cols = {c["name"] for c in db.session.execute(db.text("PRAGMA table_info(notification)")).mappings()}
         if "work_order_id" not in notif_cols:
             migrations.append("ALTER TABLE notification ADD COLUMN work_order_id INTEGER REFERENCES work_order(id)")
+    if "work_order" in tables:
+        wo_cols = {c["name"] for c in db.session.execute(db.text("PRAGMA table_info(work_order)")).mappings()}
+        if "status" not in wo_cols:
+            migrations.append("ALTER TABLE work_order ADD COLUMN status TEXT NOT NULL DEFAULT 'Nueva'")
 
     for statement in migrations:
         db.session.execute(db.text(statement))
