@@ -901,7 +901,7 @@ td input[form] {
 
 .board-scroll {
   overflow-x: auto;
-  padding: 1rem 1.2rem 2rem;
+  padding: 0;
   flex: 1;
 }
 
@@ -911,8 +911,8 @@ td input[form] {
   display: inline-flex;   /* shrink-to-content so scroll works */
   gap: 0;
   align-items: flex-start;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(46, 42, 36, 0.07);
   min-height: 220px;
@@ -1266,7 +1266,7 @@ td input[form] {
   }
 
   .board-scroll {
-    padding: 0.5rem 0.75rem 2rem;
+    padding: 0;
   }
 
   .kanban-col {
