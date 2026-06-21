@@ -206,38 +206,54 @@ def logout():
 
 @login_required
 def reports():
-    status_filter = request.args.get("status", "").strip()
+    factory_filter = request.args.get("factory_id", type=int)
     line_filter = request.args.get("line_id", type=int)
+    machine_filter = request.args.get("machine_id", type=int)
     category_filter = request.args.get("category_id", type=int)
     user_filter = request.args.get("user_id", type=int)
 
     query = build_accessible_reports_query()
-    if status_filter:
-        query = query.filter_by(status=status_filter)
-    if line_filter:
-        query = query.join(Machine).filter(Machine.line_id == line_filter)
+    if machine_filter:
+        query = query.filter(Report.machine_id == machine_filter)
+    elif line_filter:
+        query = query.join(Machine, Report.machine_id == Machine.id).filter(Machine.line_id == line_filter)
+    elif factory_filter:
+        query = (
+            query
+            .join(Machine, Report.machine_id == Machine.id)
+            .join(ProductionLine, Machine.line_id == ProductionLine.id)
+            .filter(ProductionLine.factory_id == factory_filter)
+        )
     if category_filter:
         query = query.filter(Report.category_id == category_filter)
     if user_filter and current_user.can_review_reports:
         query = query.filter(Report.created_by_id == user_filter)
 
-    if not current_user.can_review_reports:
-        query = query.filter_by(created_by_id=current_user.id)
-
     all_reports = query.all()
-    lines = ProductionLine.query.order_by(ProductionLine.name).all()
+    reports_by_status = {status: [] for status in REPORT_STATUSES}
+    others = []
+    for report in all_reports:
+        bucket = reports_by_status.get(report.status)
+        if bucket is not None:
+            bucket.append(report)
+        else:
+            others.append(report)
+
+    factories = Factory.query.order_by(Factory.name).all()
     categories = Category.query.order_by(Category.name).all()
     users = User.query.order_by(User.full_name).all() if current_user.can_review_reports else []
 
     return render_template(
         "reports.html",
-        reports=all_reports,
+        reports_by_status=reports_by_status,
+        others=others,
         statuses=REPORT_STATUSES,
-        lines=lines,
+        factories=factories,
         categories=categories,
         users=users,
-        status_filter=status_filter,
+        factory_filter=factory_filter,
         line_filter=line_filter,
+        machine_filter=machine_filter,
         category_filter=category_filter,
         user_filter=user_filter,
     )

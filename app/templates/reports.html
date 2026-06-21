@@ -1,84 +1,166 @@
 {% extends "base.html" %}
 {% block title %}Reportes | adecoagro{% endblock %}
+{% block main_class %}reports-main{% endblock %}
 {% block content %}
-<section class="page-head">
-  <div>
-    <h2>Reportes de problemas</h2>
-    <p class="muted">Carga, seguimiento y revision de incidencias de Esteril 2.</p>
-  </div>
-  <div class="top-actions">
-    <a class="button-link" href="{{ url_for('report_create') }}">Crear reporte</a>
-  </div>
-</section>
 
-<section class="card">
-  <form method="get" class="filters">
-    <label>Estado
-      <select name="status">
-        <option value="">Todos</option>
-        {% for status in statuses %}
-        <option value="{{ status }}" {% if status_filter == status %}selected{% endif %}>{{ status }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>Linea
-      <select name="line_id">
-        <option value="">Todas</option>
-        {% for line in lines %}
-        <option value="{{ line.id }}" {% if line_filter == line.id %}selected{% endif %}>{{ line.name }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>Categoria
-      <select name="category_id">
-        <option value="">Todas</option>
-        {% for category in categories %}
-        <option value="{{ category.id }}" {% if category_filter == category.id %}selected{% endif %}>{{ category.name }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    {% if current_user.can_review_reports %}
-    <label>Usuario
-      <select name="user_id">
-        <option value="">Todos</option>
-        {% for user in users %}
-        <option value="{{ user.id }}" {% if user_filter == user.id %}selected{% endif %}>{{ user.full_name }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    {% endif %}
-    <button type="submit">Filtrar</button>
-  </form>
-</section>
+<div class="reports-layout">
 
-<section class="report-grid">
-  {% for report in reports %}
-  <article class="card report-card">
-    <div class="report-card-top">
-      <span class="status-badge">{{ report.status }}</span>
-      <span class="muted">#{{ report.id }}</span>
-    </div>
-    <h3>{{ report.title }}</h3>
-    <p>{{ report.description[:160] }}{% if report.description|length > 160 %}...{% endif %}</p>
-    <ul class="meta-list">
-      <li><strong>Categoria:</strong> {{ report.category.name }}</li>
-      <li><strong>Linea:</strong> {{ report.machine.line.name }}</li>
-      <li><strong>Maquina:</strong> {{ report.machine.name }}</li>
-      <li><strong>Usuario:</strong> {{ report.created_by.full_name }}</li>
-    </ul>
-    <div class="action-row">
-      <a class="button-link secondary" href="{{ url_for('report_detail', report_id=report.id) }}">Ver detalle</a>
-      {% if current_user.is_superadmin %}
-      <form method="post" action="{{ url_for('report_delete', report_id=report.id) }}">
-        <button type="submit" class="danger-button">Eliminar</button>
-      </form>
+  {# ── Sidebar ───────────────────────────────────────────────────── #}
+  <aside class="sidebar">
+
+    <p class="sidebar-section-label">Ubicacion</p>
+
+    <nav class="folder-tree">
+      {# Root: all locations #}
+      <a href="?{% if category_filter %}category_id={{ category_filter }}&{% endif %}{% if user_filter %}user_id={{ user_filter }}{% endif %}"
+         class="ftree-item ftree-root {% if not factory_filter and not line_filter and not machine_filter %}active{% endif %}">
+        Todas las maquinas
+      </a>
+
+      {% for factory in factories %}
+      <div class="ftree-factory-block">
+        <a href="?factory_id={{ factory.id }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if user_filter %}&user_id={{ user_filter }}{% endif %}"
+           class="ftree-item ftree-factory {% if factory_filter == factory.id and not line_filter and not machine_filter %}active{% endif %}">
+          {{ factory.name }}
+        </a>
+
+        {% for line in factory.lines %}
+        <div class="ftree-line-block">
+          <a href="?line_id={{ line.id }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if user_filter %}&user_id={{ user_filter }}{% endif %}"
+             class="ftree-item ftree-line {% if line_filter == line.id and not machine_filter %}active{% endif %}">
+            {{ line.name }}
+          </a>
+
+          {% for machine in line.machines %}
+          <a href="?machine_id={{ machine.id }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if user_filter %}&user_id={{ user_filter }}{% endif %}"
+             class="ftree-item ftree-machine {% if machine_filter == machine.id %}active{% endif %}">
+            {{ machine.name }}
+          </a>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </nav>
+
+    <p class="sidebar-section-label">Filtros</p>
+
+    <form method="get" class="sidebar-form">
+      {% if machine_filter %}<input type="hidden" name="machine_id" value="{{ machine_filter }}">
+      {% elif line_filter %}<input type="hidden" name="line_id" value="{{ line_filter }}">
+      {% elif factory_filter %}<input type="hidden" name="factory_id" value="{{ factory_filter }}">
       {% endif %}
+
+      <label class="sidebar-label">Categoria
+        <select name="category_id">
+          <option value="">Todas</option>
+          {% for category in categories %}
+          <option value="{{ category.id }}" {% if category_filter == category.id %}selected{% endif %}>{{ category.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      {% if current_user.can_review_reports %}
+      <label class="sidebar-label">Usuario
+        <select name="user_id">
+          <option value="">Todos</option>
+          {% for user in users %}
+          <option value="{{ user.id }}" {% if user_filter == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% endif %}
+
+      <button type="submit" class="sidebar-btn">Aplicar filtros</button>
+    </form>
+
+    <div class="sidebar-actions">
+      <a class="sidebar-create-btn" href="{{ url_for('report_create') }}">+ Nuevo reporte</a>
     </div>
-  </article>
-  {% else %}
-  <section class="card">
-    <p>No hay reportes cargados con los filtros actuales.</p>
-  </section>
-  {% endfor %}
-</section>
+
+  </aside>
+
+  {# ── Board area ────────────────────────────────────────────────── #}
+  <div class="board-area">
+
+    <div class="board-head">
+      <div>
+        <h2>Reportes de problemas</h2>
+        <p class="muted board-subtitle">
+          {% if machine_filter %}
+            {%- for factory in factories -%}
+              {%- for line in factory.lines -%}
+                {%- for machine in line.machines -%}
+                  {%- if machine.id == machine_filter -%}{{ factory.name }} / {{ line.name }} / {{ machine.name }}{%- endif -%}
+                {%- endfor -%}
+              {%- endfor -%}
+            {%- endfor -%}
+          {% elif line_filter %}
+            {%- for factory in factories -%}
+              {%- for line in factory.lines -%}
+                {%- if line.id == line_filter -%}{{ factory.name }} / {{ line.name }}{%- endif -%}
+              {%- endfor -%}
+            {%- endfor -%}
+          {% elif factory_filter %}
+            {%- for factory in factories -%}{%- if factory.id == factory_filter -%}{{ factory.name }}{%- endif -%}{%- endfor -%}
+          {% else %}
+            Todas las ubicaciones
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="board-scroll">
+      <section class="kanban-board">
+
+        {% for status in statuses %}
+        {% set col_reports = reports_by_status[status] %}
+        <div class="kanban-col" data-status="{{ status }}">
+          <div class="col-head">
+            <span class="col-title">{{ status }}</span>
+            <span class="col-count">{{ col_reports | length }}</span>
+          </div>
+          <div class="col-body">
+            {% for report in col_reports %}
+            <a href="{{ url_for('report_detail', report_id=report.id) }}" class="kanban-card">
+              <div class="kcard-id">#{{ report.id }}</div>
+              <div class="kcard-title">{{ report.title }}</div>
+              <div class="kcard-footer">
+                <span class="kcard-machine">{{ report.machine.name }}</span>
+                <span class="kcard-user">{{ report.created_by.full_name }}</span>
+              </div>
+            </a>
+            {% else %}
+            <div class="col-empty">Sin reportes</div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+        {% if others %}
+        <div class="kanban-col" data-status="otros">
+          <div class="col-head">
+            <span class="col-title">Otros</span>
+            <span class="col-count">{{ others | length }}</span>
+          </div>
+          <div class="col-body">
+            {% for report in others %}
+            <a href="{{ url_for('report_detail', report_id=report.id) }}" class="kanban-card">
+              <div class="kcard-id">#{{ report.id }} &middot; {{ report.status }}</div>
+              <div class="kcard-title">{{ report.title }}</div>
+              <div class="kcard-footer">
+                <span class="kcard-machine">{{ report.machine.name }}</span>
+                <span class="kcard-user">{{ report.created_by.full_name }}</span>
+              </div>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+      </section>
+    </div>
+  </div>
+
+</div>
 {% endblock %}

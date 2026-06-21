@@ -41,7 +41,7 @@
       {% endif %}
     </header>
 
-    <main class="container">
+    <main class="{% block main_class %}container{% endblock %}">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <section class="flash-stack">

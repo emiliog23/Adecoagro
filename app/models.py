@@ -7,10 +7,12 @@ from . import db, login_manager
 
 REPORT_STATUSES = [
     "Nuevo",
-    "En revision",
-    "Aprobado",
-    "Leido por el supervisor",
-    "Resuelto",
+    "Leido",
+    "En espera",
+    "Abierto por el mecanico",
+    "Imposible de terminar",
+    "Terminado con problemas",
+    "Terminado normal",
 ]
 
 PARAMETER_REPORT_TYPES = [
