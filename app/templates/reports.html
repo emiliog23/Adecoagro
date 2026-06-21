@@ -84,25 +84,6 @@
   {# ── Board ─────────────────────────────────────────────────── #}
   <div class="board-area">
 
-    <div class="board-head">
-      <div>
-        <h2>Reportes de problemas</h2>
-        <p class="muted board-subtitle">
-          {% if machine_filter %}
-            {%- for factory in factories -%}{%- for line in factory.lines -%}{%- for machine in line.machines -%}
-              {%- if machine.id == machine_filter -%}{{ factory.name }} / {{ line.name }} / {{ machine.name }}{%- endif -%}
-            {%- endfor -%}{%- endfor -%}{%- endfor -%}
-          {% elif line_filter %}
-            {%- for factory in factories -%}{%- for line in factory.lines -%}
-              {%- if line.id == line_filter -%}{{ factory.name }} / {{ line.name }}{%- endif -%}
-            {%- endfor -%}{%- endfor -%}
-          {% elif factory_filter %}
-            {%- for factory in factories -%}{%- if factory.id == factory_filter -%}{{ factory.name }}{%- endif -%}{%- endfor -%}
-          {% else %}Todas las ubicaciones{% endif %}
-        </p>
-      </div>
-    </div>
-
     <div class="board-scroll">
       <section class="kanban-board">
 
