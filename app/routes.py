@@ -198,7 +198,6 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
             login_user(user)
-            flash(f"Bienvenido, {user.full_name}.", "success")
             return redirect(url_for("reports"))
         flash("Usuario o contrasena invalidos.", "error")
 
