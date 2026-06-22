@@ -651,11 +651,13 @@ def report_detail(report_id):
     if request.method == "POST":
         comment = request.form.get("comment", "").strip()
         if current_user.can_review_reports and comment:
-            # Auto-transition: first comment on a read report → observed
             if report.status == "Leido por el supervisor":
                 report.status = "Reporte observado"
             db.session.add(ReportComment(content=comment, report_id=report.id, created_by_id=current_user.id))
             db.session.commit()
+            if request.headers.get("HX-Request"):
+                return render_template("_report_comments.html", report=report,
+                                       users=User.query.order_by(User.full_name).all())
             flash("Comentario agregado.", "success")
             return redirect(url_for("report_detail", report_id=report.id))
         else:
@@ -1335,6 +1337,8 @@ def work_order_detail(ot_id):
         if comment:
             db.session.add(WorkOrderComment(content=comment, work_order_id=ot.id, created_by_id=current_user.id))
             db.session.commit()
+            if request.headers.get("HX-Request"):
+                return render_template("_ot_comments.html", ot=ot)
             flash("Comentario agregado.", "success")
         else:
             flash("Escribe un comentario para guardarlo.", "error")
@@ -1428,6 +1432,8 @@ def shift_closing_detail(closing_id):
         if closing.status == "Nuevo":
             closing.status = "Cierre comentado"
         db.session.commit()
+        if request.headers.get("HX-Request"):
+            return render_template("_closing_comments.html", closing=closing)
         flash("Comentario agregado.", "success")
         return redirect(url_for("shift_closing_detail", closing_id=closing.id))
 

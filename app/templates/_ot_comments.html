@@ -1,0 +1,24 @@
+<div id="ot-comments">
+  <form hx-post="{{ url_for('work_order_detail', ot_id=ot.id) }}"
+        hx-target="#ot-comments"
+        hx-swap="outerHTML"
+        hx-on::after-request="this.reset()"
+        class="form-grid">
+    <label>Nuevo comentario
+      <textarea name="comment" rows="3" placeholder="Agregar observacion o actualizacion"></textarea>
+    </label>
+    <button type="submit">Guardar comentario</button>
+  </form>
+  {% if ot.comments %}
+  <div class="comment-list">
+    {% for comment in ot.comments | sort(attribute='created_at', reverse=True) %}
+    <article class="comment-card">
+      <p>{{ comment.content }}</p>
+      <p class="muted">{{ comment.created_by.full_name }} &middot; {{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">Sin comentarios aun.</p>
+  {% endif %}
+</div>

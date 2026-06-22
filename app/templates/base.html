@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -61,6 +63,23 @@
       {% endwith %}
       {% block content %}{% endblock %}
     </main>
+  <script>
+  // Auto-inject CSRF token into every POST form (no template changes needed)
+  document.addEventListener("DOMContentLoaded", function () {
+    var token = document.querySelector('meta[name="csrf-token"]').content;
+    document.querySelectorAll('form[method="post"], form[method="POST"]').forEach(function (f) {
+      if (!f.querySelector('[name="csrf_token"]')) {
+        var inp = document.createElement("input");
+        inp.type = "hidden"; inp.name = "csrf_token"; inp.value = token;
+        f.prepend(inp);
+      }
+    });
+  });
+  // Send CSRF token with every HTMX request
+  document.addEventListener("htmx:configRequest", function (evt) {
+    evt.detail.headers["X-CSRFToken"] = document.querySelector('meta[name="csrf-token"]').content;
+  });
+  </script>
   {% if current_user.is_authenticated %}
   <script>
   (function poll() {

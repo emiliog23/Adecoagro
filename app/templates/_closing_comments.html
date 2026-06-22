@@ -1,0 +1,26 @@
+<div id="closing-comments">
+  {% if current_user.can_review_reports %}
+  <form hx-post="{{ url_for('shift_closing_detail', closing_id=closing.id) }}"
+        hx-target="#closing-comments"
+        hx-swap="outerHTML"
+        hx-on::after-request="this.reset()"
+        class="form-grid">
+    <label>Comentario del supervisor
+      <textarea name="comment" rows="3" placeholder="Observacion, aprobacion o indicacion sobre el turno..."></textarea>
+    </label>
+    <button type="submit">Guardar comentario</button>
+  </form>
+  {% endif %}
+  {% if closing.supervisor_comments %}
+  <div class="comment-list">
+    {% for sc in closing.supervisor_comments | sort(attribute='created_at', reverse=True) %}
+    <article class="comment-card">
+      <p>{{ sc.content }}</p>
+      <p class="muted">{{ sc.created_by.full_name }} &middot; {{ sc.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">Sin comentarios del supervisor.</p>
+  {% endif %}
+</div>

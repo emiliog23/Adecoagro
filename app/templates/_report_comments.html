@@ -1,0 +1,48 @@
+<div id="report-comments">
+  {% if current_user.can_review_reports %}
+  <form hx-post="{{ url_for('report_detail', report_id=report.id) }}"
+        hx-target="#report-comments"
+        hx-swap="outerHTML"
+        hx-on::after-request="this.reset()"
+        class="form-grid">
+    <label>Nuevo comentario
+      <textarea name="comment" rows="3" placeholder="Agregar observacion, seguimiento o indicacion"></textarea>
+    </label>
+    <button type="submit">Guardar comentario</button>
+  </form>
+  {% endif %}
+  {% if report.comments %}
+  <div class="comment-list">
+    {% for comment in report.comments | sort(attribute='created_at', reverse=True) %}
+    <article class="comment-card">
+      {% if current_user.is_superadmin %}
+      <form method="post" action="{{ url_for('report_comment_edit', comment_id=comment.id) }}" class="form-grid">
+        <label>Comentario
+          <textarea name="content" rows="3" required>{{ comment.content }}</textarea>
+        </label>
+        <label>Usuario
+          <select name="created_by_id" required>
+            {% for user in users %}
+            <option value="{{ user.id }}" {% if comment.created_by_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Fecha
+          <input type="datetime-local" name="created_at" value="{{ comment.created_at.strftime('%Y-%m-%dT%H:%M') }}" required>
+        </label>
+        <button type="submit">Guardar comentario</button>
+      </form>
+      <form method="post" action="{{ url_for('report_comment_delete', comment_id=comment.id) }}" class="comment-delete-form">
+        <button type="submit" class="danger-button">Eliminar comentario</button>
+      </form>
+      {% else %}
+      <p>{{ comment.content }}</p>
+      {% endif %}
+      <p class="muted">{{ comment.created_by.full_name }} &middot; {{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">Aun no hay comentarios registrados.</p>
+  {% endif %}
+</div>

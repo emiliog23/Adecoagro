@@ -3,16 +3,21 @@ from pathlib import Path
 
 from flask import Flask
 from flask_login import LoginManager
+from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.login_message = "Inicia sesion para continuar."
+migrate = Migrate()
+csrf = CSRFProtect()
 
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
+
     data_dir = Path(
         os.environ.get("DATA_DIR")
         or os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
@@ -20,17 +25,29 @@ def create_app():
     )
     upload_dir = data_dir / "uploads"
 
-    app.config["SECRET_KEY"] = "adecoagro-esteril-2-secret"
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{data_dir / 'adecoagro.db'}"
+    # Security — set SECRET_KEY in production via environment variable
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only-insecure-key-change-in-prod")
+
+    # Database — DATABASE_URL takes priority (PostgreSQL in production)
+    database_url = os.environ.get("DATABASE_URL", "")
+    if database_url.startswith("postgres://"):
+        # Fix legacy Heroku/Railway scheme
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url or f"sqlite:///{data_dir / 'adecoagro.db'}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["UPLOAD_FOLDER"] = str(upload_dir)
     app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
+
+    # WTF CSRF — allow token via X-CSRFToken header for HTMX requests
+    app.config["WTF_CSRF_HEADERS"] = ["X-CSRFToken"]
 
     data_dir.mkdir(parents=True, exist_ok=True)
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     db.init_app(app)
     login_manager.init_app(app)
+    migrate.init_app(app, db)
+    csrf.init_app(app)
 
     from . import routes
 
