@@ -67,4 +67,12 @@
   {% include '_ot_comments.html' %}
 </section>
 
+{% if current_user.is_superadmin %}
+<section class="card">
+  <form method="post" action="{{ url_for('work_order_delete', ot_id=ot.id) }}">
+    <button type="submit" class="danger-button">Eliminar orden de trabajo</button>
+  </form>
+</section>
+{% endif %}
+
 {% endblock %}

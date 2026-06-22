@@ -1437,3 +1437,25 @@ def shift_closing_detail(closing_id):
         return redirect(url_for("shift_closing_detail", closing_id=closing.id))
 
     return render_template("shift_closing_detail.html", closing=closing)
+
+
+@login_required
+def work_order_delete(ot_id):
+    if not superadmin_required():
+        return redirect(url_for("reports"))
+    ot = WorkOrder.query.get_or_404(ot_id)
+    db.session.delete(ot)
+    db.session.commit()
+    flash("Orden de trabajo eliminada.", "success")
+    return redirect(url_for("reports"))
+
+
+@login_required
+def shift_closing_delete(closing_id):
+    if not superadmin_required():
+        return redirect(url_for("reports"))
+    closing = ShiftClosing.query.get_or_404(closing_id)
+    db.session.delete(closing)
+    db.session.commit()
+    flash("Cierre de turno eliminado.", "success")
+    return redirect(url_for("reports"))
